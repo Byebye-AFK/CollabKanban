@@ -23,11 +23,12 @@ public class Board {
 
     @Column(nullable = false)
     private String name;
+    
+    private Long position;
 
     @OneToMany(mappedBy = "columnId")
     List<Colum> columns=new ArrayList<>();
 
-    private int columnCount=0;
 
 
 

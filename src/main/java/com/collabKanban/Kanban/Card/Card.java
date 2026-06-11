@@ -25,7 +25,7 @@ public class Card {
     public String title;
     public String description;
 
-    public Integer position;
+    public Long position;
 
     @ManyToOne
     @JoinColumn(name = "columnId")

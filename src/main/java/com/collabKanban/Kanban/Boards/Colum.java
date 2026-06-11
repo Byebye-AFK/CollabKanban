@@ -22,9 +22,7 @@ public class Colum {
     @Column(nullable = false)
     private String name;
 
-    private  int position;
-
-    private Integer maxCards=null;
+    private Long position;
 
     @ManyToOne
     @JoinColumn(name="boardId",nullable = false)

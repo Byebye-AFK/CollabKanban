@@ -1,4 +1,4 @@
-package com.collabKanban.Kanban.Card;
+package com.collabKanban.Kanban.DTO;
 
 import lombok.Getter;
 import lombok.Setter;
@@ -10,4 +10,5 @@ public class CreateCardReq {
     private String description;
     private Long columnId;
     private Long assignedTo;
+    private Long position;
 }
