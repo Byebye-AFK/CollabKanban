@@ -26,7 +26,7 @@ public class Board {
     
     private Long position;
 
-    @OneToMany(mappedBy = "columnId")
+    @OneToMany(mappedBy = "board")
     List<Colum> columns=new ArrayList<>();
 
 

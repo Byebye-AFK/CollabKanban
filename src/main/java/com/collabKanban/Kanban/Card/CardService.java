@@ -3,6 +3,7 @@ package com.collabKanban.Kanban.Card;
 import com.collabKanban.Kanban.Boards.Colum;
 import com.collabKanban.Kanban.Boards.ColumRepo;
 import com.collabKanban.Kanban.DTO.CreateCardReq;
+import com.collabKanban.Kanban.DTO.MoveCardReq;
 import com.collabKanban.Kanban.UserSpace.UserRepo;
 import com.collabKanban.Kanban.UserSpace.Users;
 import lombok.NoArgsConstructor;
@@ -12,21 +13,19 @@ import org.springframework.stereotype.Service;
 @Service
 @NoArgsConstructor
 public class CardService {
-
-
-   private  CardRepo cardRepo;
+    private UserRepo userRepo;
+    private  CardRepo cardRepo;
+    private ColumRepo columRepo;
    @Autowired
    public void cardSetter(CardRepo repo){
        cardRepo=repo;
    }
 
-   private ColumRepo columRepo;
    @Autowired
    public void columSetter(ColumRepo columRepo){
        this.columRepo=columRepo;
    }
 
-   private UserRepo userRepo;
    @Autowired
    public void userSetter(UserRepo repo){
        userRepo=repo;
@@ -53,4 +52,18 @@ public class CardService {
 
 
    return cardRepo.save(card); }
+
+    public Card MoveCard(Long cardId, MoveCardReq req){
+       Card card=cardRepo.getReferenceById(cardId);
+       Colum column=columRepo.getReferenceById(req.getTargetColumnId());
+
+       card.setPosition(req.getPosition());
+       card.setColum(column);
+
+       cardRepo.save(card);
+
+       return card;
+    }
+
+
 }

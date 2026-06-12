@@ -12,4 +12,6 @@ public interface CardRepo extends JpaRepository<Card,Long> {
 
     @Query("SELECT c FROM Card c WHERE "+"c.colum=:columnId "+"ORDER BY c.position DESC LIMIT 1")
     Card findTop(Colum columnId);
+
+
 }

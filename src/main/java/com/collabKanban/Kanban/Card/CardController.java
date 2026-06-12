@@ -1,13 +1,11 @@
 package com.collabKanban.Kanban.Card;
 
 import com.collabKanban.Kanban.DTO.CreateCardReq;
+import com.collabKanban.Kanban.DTO.MoveCardReq;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("card")
@@ -29,6 +27,17 @@ public class CardController {
         }
 
         return new ResponseEntity<>(HttpStatus.NOT_IMPLEMENTED);
+    }
+
+    @PutMapping("/move/{cardId}")
+    public ResponseEntity<Card> moveCard(@PathVariable Long cardId, @RequestBody MoveCardReq req){
+        Card newCard=cardService.MoveCard(cardId,req);
+        if(newCard!=null){
+            return  new ResponseEntity<>(newCard,HttpStatus.OK);
+        }
+
+        return new ResponseEntity<>(HttpStatus.NOT_IMPLEMENTED);
+
     }
 
 }
