@@ -1,13 +1,11 @@
 package com.collabKanban.Kanban.Boards;
 
 import com.collabKanban.Kanban.DTO.CreateBoardReq;
+import com.collabKanban.Kanban.Response.BoardResponse;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("board")
@@ -28,6 +26,15 @@ public class BoardController {
         return new ResponseEntity<>(HttpStatus.NOT_IMPLEMENTED);
     }
 
+    @GetMapping("/{id}")
+    public ResponseEntity<BoardResponse> getBoards(@PathVariable Long id){
+        BoardResponse response=boardService.findBoards(id);
 
+        if(response!=null){
+            return  new ResponseEntity<>(response,HttpStatus.OK);
+        }
+
+        return new ResponseEntity<>(HttpStatus.NOT_IMPLEMENTED);
+    }
 
 }

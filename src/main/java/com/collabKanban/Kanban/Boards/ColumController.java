@@ -1,6 +1,7 @@
 package com.collabKanban.Kanban.Boards;
 
 import com.collabKanban.Kanban.DTO.CreateColumReq;
+import com.collabKanban.Kanban.Response.ColumResponse;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -25,5 +26,19 @@ public class ColumController {
         }
 
         return new ResponseEntity<>(HttpStatus.NOT_IMPLEMENTED);
+    }
+
+    @GetMapping("/{id}")
+    public ResponseEntity<ColumResponse> getColum(@PathVariable Long id){
+        ColumResponse response= columService.getColum(id);
+
+        if(response!=null){
+
+            return new ResponseEntity<>(response,HttpStatus.OK);
+        }
+
+
+        return new ResponseEntity<>(HttpStatus.NOT_IMPLEMENTED);
+
     }
 }

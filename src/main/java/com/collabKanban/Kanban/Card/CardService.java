@@ -4,6 +4,7 @@ import com.collabKanban.Kanban.Boards.Colum;
 import com.collabKanban.Kanban.Boards.ColumRepo;
 import com.collabKanban.Kanban.DTO.CreateCardReq;
 import com.collabKanban.Kanban.DTO.MoveCardReq;
+import com.collabKanban.Kanban.Response.CardResponse;
 import com.collabKanban.Kanban.UserSpace.UserRepo;
 import com.collabKanban.Kanban.UserSpace.Users;
 import lombok.NoArgsConstructor;
@@ -65,5 +66,19 @@ public class CardService {
        return card;
     }
 
+    public CardResponse getCard(Long id){
+       CardResponse response=new CardResponse();
+       Card card=cardRepo.getReferenceById(id);
+
+
+       response.setCardId(id);
+       response.setTitle(card.getTitle());
+       response.setDescription(card.getDescription());
+       response.setPosition(card.getPosition());
+       response.setAssignedTo(card.getAssignedTo().getUserId());
+
+       return response;
+
+    }
 
 }
