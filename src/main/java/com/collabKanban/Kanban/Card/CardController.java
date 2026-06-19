@@ -8,6 +8,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+@CrossOrigin("http://localhost:5173")
 @RestController
 @RequestMapping("card")
 public class CardController {
@@ -20,8 +21,8 @@ public class CardController {
     }
 
     @PostMapping("/create")
-    public ResponseEntity<Card> addCard(@RequestBody CreateCardReq request){
-        Card card=cardService.createCard(request);
+    public ResponseEntity<CardResponse> addCard(@RequestBody CreateCardReq request){
+        CardResponse card=cardService.createCard(request);
 
         if(card!=null) {
             return new ResponseEntity<>(card, HttpStatus.OK);
@@ -31,10 +32,10 @@ public class CardController {
     }
 
     @PutMapping("/move/{cardId}")
-    public ResponseEntity<Card> moveCard(@PathVariable Long cardId, @RequestBody MoveCardReq req){
-        Card newCard=cardService.MoveCard(cardId,req);
-        if(newCard!=null){
-            return  new ResponseEntity<>(newCard,HttpStatus.OK);
+    public ResponseEntity<CardResponse> moveCard(@PathVariable Long cardId, @RequestBody MoveCardReq req){
+        CardResponse newResponse=cardService.MoveCard(cardId,req);
+        if(newResponse!=null){
+            return  new ResponseEntity<>(newResponse,HttpStatus.OK);
         }
 
         return new ResponseEntity<>(HttpStatus.NOT_IMPLEMENTED);
@@ -52,5 +53,13 @@ public class CardController {
         return new ResponseEntity<>(HttpStatus.NOT_IMPLEMENTED);
 
     }
+    @DeleteMapping("/{id}")
+    public ResponseEntity<CardResponse> deleteCard(@PathVariable Long id){
+        CardResponse response= cardService.deleteCard(id);
+        if(response!=null){
+            return  new ResponseEntity<>(response,HttpStatus.OK);
+        }
 
+        return new ResponseEntity<>(HttpStatus.NOT_IMPLEMENTED);
+    }
 }

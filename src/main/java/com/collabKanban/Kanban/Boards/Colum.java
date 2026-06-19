@@ -28,7 +28,9 @@ public class Colum {
     @JoinColumn(name="boardId",nullable = false)
     private Board board;
 
-    @OneToMany(mappedBy = "colum")
+    @OneToMany(mappedBy = "colum",
+                cascade = CascadeType.ALL,
+                orphanRemoval = true)
     List<Card> cards=new ArrayList<>();
 
 

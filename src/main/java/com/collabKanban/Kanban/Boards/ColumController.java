@@ -7,6 +7,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+@CrossOrigin("http://localhost:5173")
 @RestController
 @RequestMapping("column")
 public class ColumController {
@@ -18,8 +19,8 @@ public class ColumController {
     }
 
     @PostMapping("/create")
-    public ResponseEntity<Colum> createsColum(@RequestBody CreateColumReq req){
-        Colum colum= columService.createColum(req);
+    public ResponseEntity<ColumResponse> createsColum(@RequestBody CreateColumReq req){
+        ColumResponse colum= columService.createColum(req);
 
         if(colum!=null){
             return new ResponseEntity<>(colum, HttpStatus.OK);
@@ -40,5 +41,17 @@ public class ColumController {
 
         return new ResponseEntity<>(HttpStatus.NOT_IMPLEMENTED);
 
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<ColumResponse> deleteColum(@PathVariable Long id){
+        System.out.println("Delete column");
+        ColumResponse response= columService.deleteColum(id);
+
+        if(response!=null){
+            return  new ResponseEntity<>(response,HttpStatus.OK);
+        }
+
+        return new ResponseEntity<>(HttpStatus.NOT_IMPLEMENTED);
     }
 }

@@ -7,6 +7,7 @@ import com.collabKanban.Kanban.Response.CardResponse;
 import com.collabKanban.Kanban.Response.ColumResponse;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.web.bind.annotation.DeleteMapping;
 
 import java.util.List;
 
@@ -28,10 +29,10 @@ public class ColumService {
     @Autowired
     private void setCardRepo(CardRepo repo){ cardRepo=repo;}
 
-    public Colum createColum(CreateColumReq req){
+    public ColumResponse createColum(CreateColumReq req){
 
         Colum colum=new Colum();
-
+        ColumResponse response=new ColumResponse();
 
         Board board=boardRepo.getReferenceById(req.getBoardId());
         Colum lastcolum= columRepo.findTop(board);
@@ -42,9 +43,11 @@ public class ColumService {
         colum.setPosition(position);
         colum.setName(req.getName());
         colum.setBoard(board);
+        response.setColumnId(colum.getColumnId());
+        response.setName(colum.getName());
         columRepo.save(colum);
 
-        return colum;
+        return response;
 
     }
 
@@ -66,6 +69,18 @@ public class ColumService {
 
         return response;
 
+
+    }
+
+
+    public ColumResponse deleteColum(Long id){
+        ColumResponse response=new ColumResponse();
+        Colum column=columRepo.getReferenceById(id);
+        response.setName(column.getName());
+        response.setColumnId(column.getColumnId());
+
+        columRepo.deleteById(id);
+        return response;
 
     }
 

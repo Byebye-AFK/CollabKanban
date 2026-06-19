@@ -26,7 +26,9 @@ public class Board {
     
     private Long position;
 
-    @OneToMany(mappedBy = "board")
+    @OneToMany(mappedBy = "board",
+                cascade=CascadeType.ALL,
+                orphanRemoval=true)
     List<Colum> columns=new ArrayList<>();
 
 
