@@ -4,6 +4,7 @@ import com.collabKanban.Kanban.WorkSpace.WorkspaceMembers;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
+import org.hibernate.annotations.Cascade;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -26,7 +27,8 @@ public class Users {
 
     private String password;
 
-    @OneToMany( mappedBy = "user")
+
+    @OneToMany( mappedBy = "user",cascade = CascadeType.ALL)
     private List<WorkspaceMembers> memberships=new ArrayList<>();
 
 

@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.*;
 @RestController
 @RequestMapping("column")
 public class ColumController {
+
     ColumService columService;
 
     @Autowired

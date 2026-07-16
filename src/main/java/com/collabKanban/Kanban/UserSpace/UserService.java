@@ -1,5 +1,6 @@
 package com.collabKanban.Kanban.UserSpace;
 
+import com.collabKanban.Kanban.DTO.CreateUserReq;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -13,9 +14,21 @@ public class UserService {
         this.userRepo=userRepo;
     }
 
-    public Users addUser(Users user){
-        userRepo.save(user);
+    public CreateUserReq addUser(CreateUserReq user){
+        Users users=new Users();
+
+        users.setName(user.getName());
+        users.setEmail(user.getEmail());
+        users.setPassword(user.getPassword());
+
+        userRepo.save(users);
         return user;
     }
+
+
+
+
+
+
 
 }

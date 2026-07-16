@@ -21,10 +21,10 @@ public class Workspace {
     @Column(nullable = false)
     public String name;
 
-    @OneToMany( mappedBy = "workspace") // workspace and workspace members aka membership relationship
+    @OneToMany( mappedBy = "workspace",cascade=CascadeType.ALL) // workspace and workspace members aka membership relationship
     List<WorkspaceMembers> members=new ArrayList<>();
 
-    @OneToMany(mappedBy = "workspace") //Board and Workspace relationship
+    @OneToMany(mappedBy = "workspace",cascade = CascadeType.ALL) //Board and Workspace relationship
     List<Board>boards=new ArrayList<>();
 
 }
