@@ -2,12 +2,14 @@ package com.collabKanban.Kanban.UserSpace;
 
 import com.collabKanban.Kanban.DTO.CreateUserReq;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 
 @Service
 public class UserService {
 
     private UserRepo userRepo;
+    private final BCryptPasswordEncoder encoder=new BCryptPasswordEncoder(12);
 
     @Autowired
     public void setUserRepo(UserRepo userRepo){
@@ -19,7 +21,7 @@ public class UserService {
 
         users.setName(user.getName());
         users.setEmail(user.getEmail());
-        users.setPassword(user.getPassword());
+        users.setPassword(encoder.encode(user.getPassword()));
 
         userRepo.save(users);
         return user;
