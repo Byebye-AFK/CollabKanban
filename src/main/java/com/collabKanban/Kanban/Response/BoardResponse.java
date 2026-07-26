@@ -14,4 +14,6 @@ public class BoardResponse {
     private String name;
     private List<ColumResponse> columns;
 
+
+
 }

@@ -2,6 +2,7 @@ package com.collabKanban.Kanban.Boards;
 
 import com.collabKanban.Kanban.DTO.CreateBoardReq;
 import com.collabKanban.Kanban.Response.BoardResponse;
+import com.collabKanban.Kanban.Response.ColumResponse;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -18,8 +19,11 @@ public class BoardController {
     }
 
     @PostMapping("/create")
-    public ResponseEntity<Board> createsBoard(@RequestBody CreateBoardReq req){
-        Board board= boardService.createBoard(req);
+    public ResponseEntity<BoardResponse> createsBoard(@RequestBody CreateBoardReq req){
+        BoardResponse board= boardService.createBoard(req);
+        BoardResponse response=new BoardResponse();
+
+
         if(board!=null){
             return  new ResponseEntity<>(board,HttpStatus.OK);
         }

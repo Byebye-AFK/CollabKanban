@@ -2,23 +2,29 @@ package com.collabKanban.Kanban.authentication;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
 import org.springframework.security.config.Customizer;
+import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
 
 @Configuration
 @EnableWebSecurity
 public class Security {
 
-    MyuserDetailsService userDetails;
-    public Security(MyuserDetailsService userDetails){
+    private  final JwtFilter jwtFilter;
+
+    private final MyuserDetailsService userDetails;
+    public Security(MyuserDetailsService userDetails,JwtFilter filter){
         this.userDetails=userDetails;
+        jwtFilter=filter;
     }
 
     @Bean
@@ -32,7 +38,7 @@ public class Security {
 
             security.sessionManagement(session-> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
             security.authenticationProvider(authenticationProvider());
-        security.httpBasic(Customizer.withDefaults()); //enables Basic Auth ( without this Spring Doesnt know how credentials arrive (it can be jwt or basic auth or bearer token as well ))
+            security.addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
             return security.build();
 
 
@@ -46,6 +52,12 @@ public class Security {
         return db;
     }
 
+
+     @Bean
+    public AuthenticationManager authenticationManager(AuthenticationConfiguration configuration){
+
+        return configuration.getAuthenticationManager();
+     }
 
 
 

@@ -35,14 +35,33 @@ public class BoardService {
     @Autowired
     private void setColumRepo(ColumRepo repo){ columRepo=repo; }
 
-    public Board createBoard(CreateBoardReq req){
+    public BoardResponse createBoard(CreateBoardReq req){
         Board board=new Board();
+        BoardResponse response=new BoardResponse();
         Workspace workspace=workspaceRepo.getReferenceById(req.getWorkspaceId());
+
         board.setPosition(req.getPosition());
         board.setName(req.getName());
         board.setWorkspace(workspace);
         boardRepo.save(board);
-        return board;
+
+        response.setBoardId(board.getBoardId());
+        response.setName(board.getName());
+        response.setColumns( board.getColumns().stream().map( colum ->{ ColumResponse columnRes=new ColumResponse();
+                                                                            columnRes.setColumnId(colum.getColumnId());
+                                                                            columnRes.setName(colum.getName());
+                                                                            columnRes.setCards(colum.getCards().stream().map(card -> { CardResponse res=new CardResponse();
+                                                                                        res.setTitle(card.getTitle());
+                                                                                        res.setDescription(card.getTitle());
+                                                                                        res.setPosition(card.getPosition());
+                                                                                        res.setCardId(card.getCardId());
+                                                                                        res.setAssignedTo(card.getAssignedTo().getUserId());
+                                                                                        return  res;
+                                                                                        }).toList());
+                                                             return columnRes;  })
+                                                             .toList() );
+
+            return response;
     }
 
 

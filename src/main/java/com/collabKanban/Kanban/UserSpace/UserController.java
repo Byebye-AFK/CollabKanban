@@ -1,6 +1,7 @@
 package com.collabKanban.Kanban.UserSpace;
 
 import com.collabKanban.Kanban.DTO.CreateUserReq;
+import com.collabKanban.Kanban.DTO.UserAuthReq;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -9,6 +10,7 @@ import org.springframework.web.bind.annotation.*;
 @RestController
 @RequestMapping("user")
 public class UserController {
+
     @Autowired
     private UserService userService;
 
@@ -27,6 +29,18 @@ public class UserController {
                 ,HttpStatus.OK);
 
 
+    }
+
+    @PostMapping("/login")
+    public  ResponseEntity<String> login(@RequestBody UserAuthReq userBody){
+
+        String res=userService.verifyUser(userBody);
+
+        if(res=="Failed"){
+            return  new ResponseEntity<>(HttpStatus.NOT_FOUND);
+        }
+
+        return new ResponseEntity<>(res,HttpStatus.OK);
     }
 
 
