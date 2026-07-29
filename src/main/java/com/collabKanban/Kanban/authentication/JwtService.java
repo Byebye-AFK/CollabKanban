@@ -33,13 +33,13 @@ public class JwtService {
         }
     }
 
-    public String generateToken(String username) {
+    public String generateToken(String email) {
         System.out.println("TOken is generated");
         Map<String, Object> claims = new HashMap<>();
         return Jwts.builder()
                 .claims()
                 .add(claims)
-                .subject(username)
+                .subject(email)
                 .issuedAt(new Date(System.currentTimeMillis()))
                 .expiration(new Date(System.currentTimeMillis() + 1000L*60 * 15))
                 .and()
@@ -71,9 +71,9 @@ public class JwtService {
                 .getPayload();
     }
 
-    public boolean validateToken(String token, UserDetails userDetails) {
+    public boolean validateToken(String token, DetailsOfUser userDetails) {
         final String userName = extractUserName(token);
-        return (userName.equals(userDetails.getUsername()) && !isTokenExpired(token));
+        return (userName.equals(userDetails.getEmail()) && !isTokenExpired(token));
     }
 
     private boolean isTokenExpired(String token) {

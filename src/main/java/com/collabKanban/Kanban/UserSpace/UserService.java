@@ -62,9 +62,9 @@ public class UserService {
     }
 
     public String verifyUser(UserAuthReq user){
-        Authentication auth=manager.authenticate(new UsernamePasswordAuthenticationToken(user.getName(),user.getPassword()));
+        Authentication auth=manager.authenticate(new UsernamePasswordAuthenticationToken(user.getEmail(),user.getPassword()));
         if(auth.isAuthenticated())
-            return  jwtService.generateToken(user.getName());
+            return  jwtService.generateToken(user.getEmail());
 
 
         return  "Failed";
