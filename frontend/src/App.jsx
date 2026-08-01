@@ -1,5 +1,8 @@
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import BoardPage from './pages/BoardPage'
+import LandingPage from './pages/LandingPage'
+import LoginModal from './components/LoginModal'
+import { getStoredUser, signOut as clearSession } from './api/authApi'
 
 const css = {
   app: {
@@ -143,23 +146,33 @@ export default function App() {
   const [inputId, setInputId] = useState('1')
   // Landing input
   const [landingInput, setLandingInput] = useState('1')
+  const [loginOpen, setLoginOpen] = useState(false)
+  const [user, setUser] = useState(null)
+
+  useEffect(() => {
+    setUser(getStoredUser())
+  }, [])
 
   const load = (id) => {
     const parsed = parseInt(id, 10)
     if (!isNaN(parsed) && parsed > 0) setActiveBoardId(parsed)
   }
+  const handleLogin = (signedInUser) => {
+    setUser(signedInUser); setLoginOpen(false); load(landingInput); setInputId(landingInput)
+  }
+  const signOut = () => { clearSession(); setUser(null); setActiveBoardId(null) }
 
   return (
     <div style={css.app}>
-      {/* ── Global Top Bar ── */}
-      <header style={css.topbar}>
+      {/* ── Workspace Top Bar ── */}
+      {activeBoardId && <header style={css.topbar}>
         <div style={css.logo}>
           <div style={css.logoIcon}>⊞</div>
           Kanban
         </div>
 
-        {activeBoardId && (
           <div style={css.boardSelector}>
+            <span style={{ ...css.boardLabel, color: 'var(--text-secondary)' }}>Hi, {user?.name || 'there'}</span>
             <span style={css.boardLabel}>Board ID</span>
             <input
               style={css.boardInput}
@@ -180,50 +193,19 @@ export default function App() {
             >
               Load
             </button>
+            <button style={{ ...css.loadBtn(true), background: 'transparent', border: '1px solid var(--border)', color: 'var(--text-secondary)' }} onClick={signOut}>Sign out</button>
           </div>
-        )}
-      </header>
+      </header>}
 
       {/* ── Main Content ── */}
-      <main style={css.main}>
+      <main style={activeBoardId ? css.main : { ...css.main, overflow: 'auto' }}>
         {activeBoardId ? (
           <BoardPage boardId={activeBoardId} />
         ) : (
-          /* Landing screen */
-          <div style={css.landing}>
-            <div style={css.landingTitle}>
-              Your work,<br />
-              <span style={css.landingAccent}>beautifully organised.</span>
-            </div>
-            <p style={css.landingDesc}>
-              Enter your board ID to open a board from your Spring Boot backend.
-            </p>
-            <div style={css.landingRow}>
-              <input
-                style={css.landingInput}
-                type="number"
-                value={landingInput}
-                min="1"
-                placeholder="Board ID"
-                onChange={e => setLandingInput(e.target.value)}
-                onKeyDown={e => { if (e.key === 'Enter') { load(landingInput); setInputId(landingInput) } }}
-                onFocus={e => e.target.style.borderColor = 'var(--border-focus)'}
-                onBlur={e => e.target.style.borderColor = 'var(--border-input)'}
-                aria-label="Board ID"
-                autoFocus
-              />
-              <button
-                style={css.landingBtn}
-                onClick={() => { load(landingInput); setInputId(landingInput) }}
-                onMouseEnter={e => e.currentTarget.style.background = 'var(--accent-hover)'}
-                onMouseLeave={e => e.currentTarget.style.background = 'var(--accent)'}
-              >
-                Open board →
-              </button>
-            </div>
-          </div>
+          <LandingPage onOpenBoard={() => { load(landingInput); setInputId(landingInput) }} onLogin={() => setLoginOpen(true)} />
         )}
       </main>
+      {loginOpen && <LoginModal onClose={() => setLoginOpen(false)} onLogin={handleLogin} />}
     </div>
   )
 }
