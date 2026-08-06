@@ -22,9 +22,12 @@ public class Security {
     private  final JwtFilter jwtFilter;
 
     private final MyuserDetailsService userDetails;
-    public Security(MyuserDetailsService userDetails,JwtFilter filter){
+
+    private final OauthService oauthHandler;
+    public Security(MyuserDetailsService userDetails,JwtFilter filter,OauthService oservice){
         this.userDetails=userDetails;
         jwtFilter=filter;
+        oauthHandler=oservice;
     }
 
     @Bean
@@ -33,11 +36,12 @@ public class Security {
            security.csrf(csrfConfigurer-> csrfConfigurer.disable());
 
            security.authorizeHttpRequests(authorize-> authorize
-                   .requestMatchers("/user/**").permitAll()
+                   .requestMatchers("/user/**","/oauth2/**").permitAll()
                    .anyRequest().authenticated());
 
             security.sessionManagement(session-> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
             security.authenticationProvider(authenticationProvider());
+            security.oauth2Login(oauth->oauth.successHandler(oauthHandler));
             security.addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
             return security.build();
 
