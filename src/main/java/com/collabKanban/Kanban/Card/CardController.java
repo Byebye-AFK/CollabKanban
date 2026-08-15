@@ -33,6 +33,7 @@ public class CardController {
 
     @PutMapping("/move/{cardId}")
     public ResponseEntity<CardResponse> moveCard(@PathVariable Long cardId, @RequestBody MoveCardReq req){
+        System.out.println("Card Move Card COntroller called");
         CardResponse newResponse=cardService.MoveCard(cardId,req);
         if(newResponse!=null){
             return  new ResponseEntity<>(newResponse,HttpStatus.OK);

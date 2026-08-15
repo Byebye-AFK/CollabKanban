@@ -36,7 +36,7 @@ public class Security {
            security.csrf(csrfConfigurer-> csrfConfigurer.disable());
 
            security.authorizeHttpRequests(authorize-> authorize
-                   .requestMatchers("/user/**","/oauth2/**").permitAll()
+                   .requestMatchers("/user/**","/oauth2/**","/ws/**").permitAll()
                    .anyRequest().authenticated());
 
             security.sessionManagement(session-> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
