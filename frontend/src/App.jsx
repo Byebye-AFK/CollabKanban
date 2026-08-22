@@ -1,8 +1,11 @@
 import React, { useEffect, useState } from 'react'
 import BoardPage from './pages/BoardPage'
 import LandingPage from './pages/LandingPage'
+import DashboardPage from './pages/DashboardPage'
 import LoginModal from './components/LoginModal'
-import { getStoredUser, signOut as clearSession } from './api/authApi'
+import Avatar from './components/Avatar'
+import { getStoredUser, signOut as clearSession, consumeOauthCallback } from './api/authApi'
+import { rememberVisit } from './api/dashboardApi'
 
 const css = {
   app: {
@@ -16,43 +19,42 @@ const css = {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'space-between',
-    padding: '0 24px',
+    padding: '0 22px',
     height: 52,
     background: 'var(--bg-base)',
     borderBottom: '1px solid var(--border)',
     flexShrink: 0,
     zIndex: 20,
+    gap: 14,
   },
-  logo: {
+  left: { display: 'flex', alignItems: 'center', gap: 14, minWidth: 0 },
+  backBtn: {
     display: 'flex',
     alignItems: 'center',
-    gap: 9,
-    fontWeight: 700,
-    fontSize: 15,
-    color: 'var(--text-primary)',
-    letterSpacing: '-0.02em',
-    userSelect: 'none',
-  },
-  logoIcon: {
-    width: 26,
-    height: 26,
-    background: 'var(--accent)',
-    borderRadius: 7,
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
+    gap: 7,
+    padding: '6px 12px 6px 9px',
+    borderRadius: 'var(--radius-sm)',
+    background: 'var(--bg-card)',
+    border: '1px solid var(--border)',
+    color: 'var(--text-secondary)',
     fontSize: 13,
+    fontWeight: 600,
+    cursor: 'pointer',
+    transition: 'color var(--transition-fast), border-color var(--transition-fast)',
   },
-  boardSelector: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: 8,
+  crumb: { display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 },
+  crumbMuted: { fontSize: 13, color: 'var(--text-muted)', whiteSpace: 'nowrap' },
+  crumbSep: { color: 'var(--text-muted)', fontSize: 13 },
+  crumbActive: {
+    fontSize: 13.5,
+    fontWeight: 600,
+    color: 'var(--text-primary)',
+    whiteSpace: 'nowrap',
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
   },
-  boardLabel: {
-    fontSize: 12,
-    color: 'var(--text-muted)',
-    fontWeight: 500,
-  },
+  right: { display: 'flex', alignItems: 'center', gap: 10 },
+  boardLabel: { fontSize: 12, color: 'var(--text-muted)', fontWeight: 500 },
   boardInput: {
     background: 'var(--bg-card)',
     border: '1px solid var(--border)',
@@ -61,118 +63,106 @@ const css = {
     fontSize: 13,
     fontWeight: 500,
     padding: '5px 10px',
-    width: 70,
+    width: 66,
     outline: 'none',
     textAlign: 'center',
   },
-  loadBtn: (active) => ({
-    padding: '5px 13px',
+  loadBtn: {
+    padding: '6px 13px',
     borderRadius: 7,
-    background: active ? 'var(--accent)' : 'var(--accent-light)',
-    color: active ? '#fff' : 'var(--accent)',
+    background: 'var(--accent)',
+    color: '#fff',
     fontSize: 13,
     fontWeight: 600,
-    cursor: active ? 'pointer' : 'not-allowed',
+    cursor: 'pointer',
     border: 'none',
     transition: 'background var(--transition-fast)',
-  }),
+  },
   main: {
     flex: 1,
     overflow: 'hidden',
     display: 'flex',
     flexDirection: 'column',
   },
-  landing: {
-    flex: 1,
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    flexDirection: 'column',
-    gap: 16,
-    padding: 40,
-    textAlign: 'center',
-  },
-  landingTitle: {
-    fontSize: 28,
-    fontWeight: 700,
-    color: 'var(--text-primary)',
-    letterSpacing: '-0.03em',
-    lineHeight: 1.2,
-  },
-  landingAccent: {
-    color: 'var(--accent)',
-  },
-  landingDesc: {
-    fontSize: 15,
-    color: 'var(--text-muted)',
-    maxWidth: 360,
-    lineHeight: 1.6,
-  },
-  landingRow: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: 10,
-    marginTop: 8,
-  },
-  landingInput: {
-    background: 'var(--bg-card)',
-    border: '1px solid var(--border-input)',
-    borderRadius: 'var(--radius-sm)',
-    color: 'var(--text-primary)',
-    fontSize: 14,
-    padding: '9px 14px',
-    width: 110,
-    outline: 'none',
-    textAlign: 'center',
-    transition: 'border-color var(--transition-fast)',
-  },
-  landingBtn: {
-    padding: '9px 20px',
-    borderRadius: 'var(--radius-sm)',
-    background: 'var(--accent)',
-    color: '#fff',
-    fontSize: 14,
-    fontWeight: 600,
-    cursor: 'pointer',
-    border: 'none',
-    transition: 'background var(--transition-fast)',
-  },
 }
 
 export default function App() {
-  // The board to display (null = landing screen)
+  // null → dashboard (when signed in) or landing page
   const [activeBoardId, setActiveBoardId] = useState(null)
-  // Input value in the topbar selector
+  const [activeBoardName, setActiveBoardName] = useState(null)
+  const [activeWorkspace, setActiveWorkspace] = useState(null)
   const [inputId, setInputId] = useState('1')
-  // Landing input
-  const [landingInput, setLandingInput] = useState('1')
   const [loginOpen, setLoginOpen] = useState(false)
   const [user, setUser] = useState(null)
 
   useEffect(() => {
-    setUser(getStoredUser())
+    const oauthUser = consumeOauthCallback()
+    setUser(oauthUser || getStoredUser())
   }, [])
 
-  const load = (id) => {
+  /**
+   * Opens a board and records the visit so the dashboard's
+   * "Last board" tile has something to point at.
+   */
+  const openBoard = (id, workspace, boardName) => {
     const parsed = parseInt(id, 10)
-    if (!isNaN(parsed) && parsed > 0) setActiveBoardId(parsed)
+    if (isNaN(parsed) || parsed <= 0) return
+    const board = workspace?.boards?.find(b => b.boardId === parsed)
+    const name = boardName || board?.name || `Board ${parsed}`
+    setActiveBoardId(parsed)
+    setActiveBoardName(name)
+    setActiveWorkspace(workspace || null)
+    setInputId(String(parsed))
+    rememberVisit({ boardId: parsed, name, workspaceName: workspace?.name })
   }
+
+  const backToDashboard = () => {
+    setActiveBoardId(null)
+    setActiveBoardName(null)
+    setActiveWorkspace(null)
+  }
+
   const handleLogin = (signedInUser) => {
-    setUser(signedInUser); setLoginOpen(false); load(landingInput); setInputId(landingInput)
+    setUser(signedInUser)
+    setLoginOpen(false)
   }
-  const signOut = () => { clearSession(); setUser(null); setActiveBoardId(null) }
 
-  return (
-    <div style={css.app}>
-      {/* ── Workspace Top Bar ── */}
-      {activeBoardId && <header style={css.topbar}>
-        <div style={css.logo}>
-          <div style={css.logoIcon}>⊞</div>
-          Kanban
-        </div>
+  const signOut = () => {
+    clearSession()
+    setUser(null)
+    backToDashboard()
+  }
 
-          <div style={css.boardSelector}>
-            <span style={{ ...css.boardLabel, color: 'var(--text-secondary)' }}>Hi, {user?.name || 'there'}</span>
+  // ── Board view ──
+  if (user && activeBoardId) {
+    return (
+      <div style={css.app}>
+        <header style={css.topbar}>
+          <div style={css.left}>
+            <button
+              style={css.backBtn}
+              onClick={backToDashboard}
+              onMouseEnter={e => { e.currentTarget.style.color = 'var(--text-primary)' }}
+              onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-secondary)' }}
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M15 18l-6-6 6-6" />
+              </svg>
+              Dashboard
+            </button>
+            <div style={css.crumb}>
+              {activeWorkspace && (
+                <>
+                  <span style={css.crumbMuted}>{activeWorkspace.name}</span>
+                  <span style={css.crumbSep}>/</span>
+                </>
+              )}
+              <span style={css.crumbActive}>{activeBoardName}</span>
+            </div>
+          </div>
+
+          <div style={css.right}>
             <span style={css.boardLabel}>Board ID</span>
             <input
               style={css.boardInput}
@@ -180,30 +170,50 @@ export default function App() {
               value={inputId}
               min="1"
               onChange={e => setInputId(e.target.value)}
-              onKeyDown={e => { if (e.key === 'Enter') load(inputId) }}
-              onFocus={e => e.target.style.borderColor = 'var(--border-focus)'}
-              onBlur={e => e.target.style.borderColor = 'var(--border)'}
+              onKeyDown={e => { if (e.key === 'Enter') openBoard(inputId) }}
+              onFocus={e => { e.target.style.borderColor = 'var(--border-focus)' }}
+              onBlur={e => { e.target.style.borderColor = 'var(--border)' }}
               aria-label="Board ID"
             />
             <button
-              style={css.loadBtn(!!inputId)}
-              onClick={() => load(inputId)}
-              onMouseEnter={e => { if (inputId) e.currentTarget.style.background = 'var(--accent-hover)' }}
-              onMouseLeave={e => { if (inputId) e.currentTarget.style.background = 'var(--accent)' }}
+              style={css.loadBtn}
+              onClick={() => openBoard(inputId)}
+              onMouseEnter={e => { e.currentTarget.style.background = 'var(--accent-hover)' }}
+              onMouseLeave={e => { e.currentTarget.style.background = 'var(--accent)' }}
             >
               Load
             </button>
-            <button style={{ ...css.loadBtn(true), background: 'transparent', border: '1px solid var(--border)', color: 'var(--text-secondary)' }} onClick={signOut}>Sign out</button>
+            <Avatar name={user?.name || 'Guest'} size={28} />
           </div>
-      </header>}
+        </header>
 
-      {/* ── Main Content ── */}
-      <main style={activeBoardId ? css.main : { ...css.main, overflow: 'auto' }}>
-        {activeBoardId ? (
+        <main style={css.main}>
           <BoardPage boardId={activeBoardId} />
-        ) : (
-          <LandingPage onOpenBoard={() => { load(landingInput); setInputId(landingInput) }} onLogin={() => setLoginOpen(true)} />
-        )}
+        </main>
+      </div>
+    )
+  }
+
+  // ── Dashboard ──
+  if (user) {
+    return (
+      <div style={css.app}>
+        <main style={css.main}>
+          <DashboardPage
+            user={user}
+            onOpenBoard={(id, workspace) => openBoard(id, workspace)}
+            onSignOut={signOut}
+          />
+        </main>
+      </div>
+    )
+  }
+
+  // ── Signed out ──
+  return (
+    <div style={css.app}>
+      <main style={{ ...css.main, overflow: 'auto' }}>
+        <LandingPage onOpenBoard={() => setLoginOpen(true)} onLogin={() => setLoginOpen(true)} />
       </main>
       {loginOpen && <LoginModal onClose={() => setLoginOpen(false)} onLogin={handleLogin} />}
     </div>

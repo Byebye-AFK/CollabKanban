@@ -67,7 +67,7 @@ public class CardService {
 
    return response; }
 
-    @Transactional
+
     public CardResponse MoveCard(Long cardId, MoveCardReq req){
        CardResponse res=new CardResponse();
         System.out.println("-------Moving Card-------");

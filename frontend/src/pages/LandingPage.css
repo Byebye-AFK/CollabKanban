@@ -1,0 +1,633 @@
+/* ══════════════════════════════════════════════════════════════
+   Landing page — light marketing surface.
+   Deliberately themed independently of the (dark) app shell, so
+   every token here is namespaced under .lp and never leaks out.
+   ═════════════════════════════════════════════════════════════ */
+
+.lp {
+  --ink:        #0A0A0F;
+  --ink-2:      #3C4043;
+  --ink-3:      #5F6368;
+  --ink-4:      #9AA0A6;
+  --line:       #E8EAED;
+  --paper:      #FFFFFF;
+  --ground:     #FAFAFA;
+  --stage:      #F4F4F5;
+  --blue:       #2E6BF6;
+  --blue-dark:  #1A54DC;
+  --blue-soft:  #E8F0FE;
+
+  --font:     'Figtree', 'Inter', system-ui, -apple-system, sans-serif;
+  --display:  'Outfit', 'Figtree', system-ui, sans-serif;
+  --hand:     'Caveat', 'Segoe Script', cursive;
+
+  /* Realistic depth: light falls off across four stacked layers
+     rather than one flat blur. */
+  --lift-1:
+    0 1px 2px rgba(16, 24, 40, 0.05),
+    0 3px 6px rgba(16, 24, 40, 0.04);
+  --lift-2:
+    0 1px 2px rgba(16, 24, 40, 0.04),
+    0 4px 8px rgba(16, 24, 40, 0.04),
+    0 10px 20px rgba(16, 24, 40, 0.05);
+  --lift-3:
+    0 1px 2px rgba(16, 24, 40, 0.04),
+    0 6px 12px rgba(16, 24, 40, 0.05),
+    0 16px 32px rgba(16, 24, 40, 0.06),
+    0 32px 56px rgba(16, 24, 40, 0.05);
+
+  position: relative;
+  min-height: 100%;
+  background: var(--ground);
+  color: var(--ink);
+  font-family: var(--font);
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+}
+
+.lp *,
+.lp *::before,
+.lp *::after { box-sizing: border-box; }
+
+/* ── Navigation ─────────────────────────────────────────────── */
+.lp-nav {
+  position: sticky;
+  top: 0;
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 16px 30px;
+  background: rgba(250, 250, 250, 0.72);
+  backdrop-filter: saturate(180%) blur(14px);
+  -webkit-backdrop-filter: saturate(180%) blur(14px);
+  border-bottom: 1px solid transparent;
+  transition: border-color 240ms ease, background 240ms ease;
+}
+.lp-nav.is-stuck {
+  border-bottom-color: var(--line);
+  background: rgba(255, 255, 255, 0.86);
+}
+
+.lp-brand {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  font-family: var(--display);
+  font-size: 21px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: var(--ink);
+  user-select: none;
+}
+
+.lp-nav-links {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.lp-nav-link {
+  position: relative;
+  padding: 8px 14px;
+  border: none;
+  background: none;
+  font-family: inherit;
+  font-size: 15px;
+  font-weight: 450;
+  color: var(--ink-2);
+  cursor: pointer;
+  border-radius: 8px;
+  transition: color 160ms ease, background 160ms ease;
+}
+.lp-nav-link:hover { color: var(--ink); background: rgba(10, 10, 15, 0.045); }
+
+.lp-nav-right { display: flex; align-items: center; gap: 6px; }
+
+.lp-signin {
+  padding: 9px 14px;
+  border: none;
+  background: none;
+  font-family: inherit;
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--ink);
+  cursor: pointer;
+  border-radius: 8px;
+  transition: background 160ms ease;
+}
+.lp-signin:hover { background: rgba(10, 10, 15, 0.045); }
+
+.lp-ghost-btn {
+  padding: 10px 20px;
+  border: 1px solid #D6D8DC;
+  border-radius: 10px;
+  background: var(--paper);
+  font-family: inherit;
+  font-size: 15px;
+  font-weight: 550;
+  color: var(--ink);
+  cursor: pointer;
+  box-shadow: var(--lift-1);
+  transition: transform 160ms cubic-bezier(.2,.8,.3,1),
+              box-shadow 160ms ease, border-color 160ms ease;
+}
+.lp-ghost-btn:hover {
+  transform: translateY(-1px);
+  border-color: #C3C6CB;
+  box-shadow: var(--lift-2);
+}
+.lp-ghost-btn:active { transform: translateY(0); }
+
+/* ── Hero stage ─────────────────────────────────────────────── */
+.lp-hero {
+  position: relative;
+  margin: 8px 14px 0;
+  padding: 132px 24px 164px;
+  border-radius: 26px;
+  display: flex;
+  align-items: center;
+  min-height: min(880px, 86vh);
+  background: var(--stage);
+  overflow: hidden;
+  isolation: isolate;
+}
+
+/* Halftone ground. Two offset dot grids give the print-like
+   texture in the reference instead of a flat single grid. */
+.lp-halftone {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  background-image:
+    radial-gradient(circle at center, rgba(10, 10, 15, 0.115) 1.15px, transparent 1.35px),
+    radial-gradient(circle at center, rgba(10, 10, 15, 0.055) 1px, transparent 1.2px);
+  background-size: 15px 15px, 15px 15px;
+  background-position: 0 0, 7.5px 7.5px;
+  -webkit-mask-image: radial-gradient(ellipse 96% 90% at 50% 45%, #000 62%, transparent 100%);
+          mask-image: radial-gradient(ellipse 96% 90% at 50% 45%, #000 62%, transparent 100%);
+}
+
+/* Soft light pooling behind the headline */
+.lp-hero::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 22%;
+  width: min(900px, 85%);
+  height: 460px;
+  transform: translateX(-50%);
+  background: radial-gradient(ellipse at center, rgba(255, 255, 255, 0.9), rgba(255, 255, 255, 0) 68%);
+  pointer-events: none;
+  z-index: 1;
+}
+
+.lp-hero-inner {
+  position: relative;
+  z-index: 3;
+  width: 100%;
+  max-width: 900px;
+  margin: 0 auto;
+  text-align: center;
+}
+
+.lp-h1 {
+  margin: 0;
+  font-family: var(--display);
+  /* Tracks viewport width the way the reference does (~4.4% of it),
+     which is what keeps the flanking art clear of the text. */
+  font-size: clamp(36px, 4.8vw, 84px);
+  line-height: 1.04;
+  font-weight: 500;
+  letter-spacing: -0.035em;
+  color: var(--ink);
+}
+.lp-h1 .lp-h1-dim { color: #A2A6AB; }
+
+.lp-sub {
+  margin: 30px auto 0;
+  max-width: 460px;
+  font-size: clamp(15px, 1.5vw, 18px);
+  line-height: 1.55;
+  font-weight: 400;
+  color: var(--ink-2);
+}
+
+.lp-cta-row {
+  margin-top: 38px;
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.lp-cta {
+  position: relative;
+  padding: 15px 32px;
+  border: none;
+  border-radius: 12px;
+  background: var(--blue);
+  font-family: inherit;
+  font-size: 16px;
+  font-weight: 600;
+  color: #fff;
+  cursor: pointer;
+  overflow: hidden;
+  box-shadow:
+    0 1px 2px rgba(46, 107, 246, 0.30),
+    0 6px 16px rgba(46, 107, 246, 0.28),
+    0 14px 30px rgba(46, 107, 246, 0.18);
+  transition: transform 180ms cubic-bezier(.2,.8,.3,1),
+              box-shadow 180ms ease, background 180ms ease;
+}
+.lp-cta:hover {
+  background: var(--blue-dark);
+  transform: translateY(-2px);
+  box-shadow:
+    0 2px 4px rgba(46, 107, 246, 0.30),
+    0 10px 24px rgba(46, 107, 246, 0.34),
+    0 20px 44px rgba(46, 107, 246, 0.22);
+}
+.lp-cta:active { transform: translateY(0); }
+
+/* Sheen sweeps across the button on hover */
+.lp-cta::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(105deg, transparent 30%, rgba(255,255,255,0.38) 48%, transparent 66%);
+  transform: translateX(-120%);
+  transition: transform 0s;
+}
+.lp-cta:hover::after { transform: translateX(120%); transition: transform 720ms ease; }
+
+.lp-cta-note {
+  margin-top: 18px;
+  font-size: 13.5px;
+  font-weight: 500;
+  color: var(--ink-3);
+}
+
+/* ── Centre logo mark ───────────────────────────────────────── */
+.lp-mark {
+  width: 84px;
+  height: 84px;
+  margin: 0 auto 44px;
+  border-radius: 22px;
+  background: linear-gradient(150deg, #FFFFFF 0%, #F0F1F3 100%);
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 9px;
+  place-content: center;
+  padding: 22px;
+  box-shadow:
+    0 1px 2px rgba(16, 24, 40, 0.06),
+    0 8px 16px rgba(16, 24, 40, 0.08),
+    0 20px 40px rgba(16, 24, 40, 0.10),
+    inset 0 1.5px 0 rgba(255, 255, 255, 0.9),
+    inset 0 -2px 5px rgba(16, 24, 40, 0.05);
+}
+.lp-mark i {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #1F1F24;
+  display: block;
+}
+.lp-mark i:first-child { background: #4FA3F7; }
+
+/* ══ Floating art ═══════════════════════════════════════════ */
+.lp-art {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+}
+
+/* Parallax shell — reads --px/--py written by the hero pointer
+   handler; --d is the element's depth in px. */
+.lp-par {
+  position: absolute;
+  will-change: transform;
+  transform: translate3d(
+    calc(var(--px, 0) * var(--d, 10) * 1px),
+    calc(var(--py, 0) * var(--d, 10) * 1px), 0);
+}
+
+/* Inner bob — separated from .lp-par so the two transforms
+   never fight each other. */
+.lp-bob {
+  animation: lp-bob var(--dur, 9s) ease-in-out infinite;
+  animation-delay: var(--delay, 0s);
+  will-change: transform;
+}
+@keyframes lp-bob {
+  0%, 100% {
+    transform: translateY(0) rotate(var(--rot, 0deg)) scale(var(--as, 1));
+  }
+  50% {
+    transform: translateY(-13px)
+               rotate(calc(var(--rot, 0deg) + var(--rot-sway, 0.9deg)))
+               scale(var(--as, 1));
+  }
+}
+
+/* Sweeping second hand — 60 discrete steps, like a real movement. */
+.lp-second-hand {
+  transform-box: view-box;
+  transform-origin: 50px 55px;
+  animation: lp-sweep 60s steps(60, end) infinite;
+}
+@keyframes lp-sweep { to { transform: rotate(360deg); } }
+
+/* Entrance: art settles in from slightly off-position */
+.lp-drop {
+  opacity: 0;
+  animation: lp-drop 1000ms cubic-bezier(.16,.84,.34,1) forwards;
+  animation-delay: var(--in, 200ms);
+}
+@keyframes lp-drop {
+  from { opacity: 0; transform: translateY(26px) scale(0.94); }
+  to   { opacity: 1; transform: translateY(0)    scale(1); }
+}
+
+/* ── Paper & folders ────────────────────────────────────────── */
+.lp-paper {
+  position: relative;
+  background: var(--paper);
+  border-radius: 16px;
+  box-shadow: var(--lift-3);
+}
+/* File-folder tab */
+.lp-paper.has-tab::before {
+  content: '';
+  position: absolute;
+  top: -13px;
+  left: 0;
+  width: 46%;
+  height: 16px;
+  background: var(--paper);
+  border-radius: 12px 12px 0 0;
+  box-shadow: 0 -1px 2px rgba(16, 24, 40, 0.04);
+}
+
+/* ── Sticky note ────────────────────────────────────────────── */
+.lp-note {
+  width: 250px;
+  padding: 34px 26px 30px;
+  border-radius: 3px;
+  font-family: var(--hand);
+  font-size: 22px;
+  line-height: 1.34;
+  color: #43391A;
+  /* Paper isn't a flat fill: the sheet catches light at the top
+     and the adhesive strip darkens the upper band. */
+  background:
+    linear-gradient(178deg, rgba(0,0,0,0.05) 0 14%, rgba(0,0,0,0) 26%),
+    linear-gradient(160deg, #FCEE7E 0%, #F9E36A 46%, #F3D95A 100%);
+  box-shadow:
+    0 1px 2px rgba(16, 24, 40, 0.10),
+    0 8px 16px rgba(16, 24, 40, 0.10),
+    0 20px 34px rgba(16, 24, 40, 0.10);
+}
+/* Bottom-right corner lifting off the surface — soft falloff, no
+   hard square edge. */
+.lp-note::after {
+  content: '';
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: 68px;
+  height: 68px;
+  background: radial-gradient(circle at 100% 100%, rgba(90, 70, 10, 0.13), rgba(90, 70, 10, 0) 72%);
+  border-bottom-right-radius: 3px;
+  pointer-events: none;
+}
+
+.lp-pin {
+  position: absolute;
+  top: -13px;
+  left: 50%;
+  transform: translateX(-50%);
+  filter: drop-shadow(0 3px 3px rgba(16, 24, 40, 0.30));
+}
+
+/* ── Soft 3D tile (icons) ───────────────────────────────────── */
+.lp-tile {
+  display: grid;
+  place-items: center;
+  border-radius: 26%;
+  background: linear-gradient(150deg, #FFFFFF 0%, #F1F2F4 100%);
+  box-shadow:
+    0 1px 2px rgba(16, 24, 40, 0.06),
+    0 6px 14px rgba(16, 24, 40, 0.09),
+    0 16px 30px rgba(16, 24, 40, 0.09),
+    inset 0 1.5px 0 rgba(255, 255, 255, 0.95),
+    inset 0 -2px 5px rgba(16, 24, 40, 0.05);
+}
+
+/* ── Mini card internals ────────────────────────────────────── */
+.lp-card-title {
+  font-family: var(--display);
+  font-size: 17px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: var(--ink);
+}
+.lp-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.lp-chip {
+  flex: none;
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  display: grid;
+  place-items: center;
+  font-size: 11.5px;
+  font-weight: 700;
+  color: #fff;
+}
+.lp-task-name {
+  font-size: 13.5px;
+  font-weight: 550;
+  color: var(--ink);
+  white-space: nowrap;
+}
+.lp-stack { display: flex; margin-left: auto; }
+.lp-stack > * { margin-left: -8px; border-radius: 50%; box-shadow: 0 0 0 2.5px #fff; }
+.lp-stack > *:first-child { margin-left: 0; }
+
+.lp-meter {
+  height: 6px;
+  flex: 1;
+  border-radius: 99px;
+  background: #E9EAEC;
+  overflow: hidden;
+}
+.lp-meter i {
+  display: block;
+  height: 100%;
+  border-radius: 99px;
+  width: 0;
+  background: var(--c, var(--blue));
+  transition: width 1400ms cubic-bezier(.2,.75,.3,1);
+  transition-delay: var(--md, 600ms);
+}
+.lp-hero.is-ready .lp-meter i { width: var(--w, 60%); }
+
+.lp-time-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 7px 13px;
+  border-radius: 9px;
+  background: var(--blue-soft);
+  font-size: 13px;
+  font-weight: 600;
+  color: #1552C9;
+}
+
+/* ── Sections below the fold ────────────────────────────────── */
+.lp-section { padding: 108px 30px; max-width: 1180px; margin: 0 auto; }
+
+.lp-eyebrow {
+  display: inline-block;
+  padding: 6px 13px;
+  border-radius: 99px;
+  background: var(--blue-soft);
+  font-size: 12.5px;
+  font-weight: 650;
+  letter-spacing: 0.02em;
+  color: #1552C9;
+  margin-bottom: 20px;
+}
+.lp-h2 {
+  margin: 0;
+  font-family: var(--display);
+  font-size: clamp(28px, 3.6vw, 46px);
+  line-height: 1.12;
+  font-weight: 500;
+  letter-spacing: -0.03em;
+  color: var(--ink);
+}
+.lp-lede {
+  margin: 18px 0 0;
+  max-width: 520px;
+  font-size: 17px;
+  line-height: 1.6;
+  color: var(--ink-3);
+}
+.lp-center { text-align: center; }
+.lp-center .lp-lede { margin-left: auto; margin-right: auto; }
+
+.lp-grid {
+  margin-top: 56px;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 22px;
+}
+.lp-feature {
+  padding: 32px 28px 34px;
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  background: var(--paper);
+  box-shadow: var(--lift-1);
+  transition: transform 260ms cubic-bezier(.2,.8,.3,1), box-shadow 260ms ease;
+}
+.lp-feature:hover { transform: translateY(-4px); box-shadow: var(--lift-3); }
+.lp-feature h3 {
+  margin: 22px 0 9px;
+  font-family: var(--display);
+  font-size: 19px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+.lp-feature p { margin: 0; font-size: 14.5px; line-height: 1.65; color: var(--ink-3); }
+
+.lp-feat-icon {
+  width: 46px;
+  height: 46px;
+  border-radius: 13px;
+  display: grid;
+  place-items: center;
+  background: linear-gradient(150deg, #FFFFFF, #F1F2F4);
+  box-shadow: var(--lift-1), inset 0 1px 0 #fff;
+}
+
+/* Closing band */
+.lp-band {
+  margin: 0 14px 14px;
+  padding: 92px 30px 96px;
+  border-radius: 26px;
+  background: var(--stage);
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+}
+
+.lp-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  flex-wrap: wrap;
+  padding: 30px 34px 40px;
+  max-width: 1180px;
+  margin: 0 auto;
+  font-size: 14px;
+  color: var(--ink-4);
+}
+
+/* ── Scroll reveal ──────────────────────────────────────────── */
+.lp-rise {
+  opacity: 0;
+  transform: translateY(22px);
+  transition: opacity 760ms cubic-bezier(.16,.84,.34,1),
+              transform 760ms cubic-bezier(.16,.84,.34,1);
+  transition-delay: var(--in, 0ms);
+}
+.lp-rise.is-in { opacity: 1; transform: none; }
+
+/* ── Responsive ─────────────────────────────────────────────── */
+/* The full composition needs room on both flanks of the headline.
+   Step the art down before dropping it entirely. */
+@media (max-width: 1660px) { .lp-art { --as: 0.92; } }
+@media (max-width: 1500px) { .lp-art { --as: 0.86; } }
+@media (max-width: 1360px) { .lp-art { --as: 0.80; } }
+
+/* Below this the flanks can't clear the headline. Drop the art and
+   collapse the stage with it — a tall empty dot field looks unfinished. */
+@media (max-width: 1240px) {
+  .lp-art { display: none; }
+  .lp-hero {
+    min-height: 0;
+    padding: 92px 24px 104px;
+  }
+}
+@media (max-width: 900px) {
+  .lp-nav-links { display: none; }
+  .lp-grid { grid-template-columns: 1fr; }
+  .lp-section { padding: 76px 24px; }
+}
+@media (max-width: 560px) {
+  .lp-nav { padding: 14px 18px; }
+  .lp-signin { display: none; }
+  .lp-hero { margin: 6px 8px 0; padding: 62px 20px 70px; border-radius: 20px; min-height: 0; }
+  .lp-mark { width: 68px; height: 68px; padding: 18px; gap: 7px; margin-bottom: 32px; }
+  .lp-mark i { width: 12px; height: 12px; }
+  .lp-cta { width: 100%; }
+  .lp-band { padding: 66px 22px 70px; }
+}
+
+/* ── Reduced motion ─────────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  .lp-bob { animation: none; transform: rotate(var(--rot, 0deg)); }
+  .lp-drop { opacity: 1; animation: none; }
+  .lp-rise { opacity: 1; transform: none; transition: none; }
+  .lp-par { transform: none; }
+  .lp-cta::after { display: none; }
+  .lp-second-hand { animation: none !important; }
+}
