@@ -12,303 +12,208 @@ export function columnColor(index) {
   return COLUMN_COLORS[index % COLUMN_COLORS.length]
 }
 
-const COLUMN_WIDTH = 290
+const PlusIcon = () => (
+  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+    strokeWidth="2" strokeLinecap="round">
+    <path d="M12 5v14M5 12h14" />
+  </svg>
+)
 
-function css(color, isDragOver) {
-  return {
-    column: {
-      width: COLUMN_WIDTH,
-      minWidth: COLUMN_WIDTH,
-      display: 'flex',
-      flexDirection: 'column',
-      background: isDragOver
-        ? `linear-gradient(180deg, ${color}14 0%, var(--bg-column) 80px)`
-        : 'var(--bg-column)',
-      border: `1px solid ${isDragOver ? color + '40' : 'var(--border)'}`,
-      borderRadius: 'var(--radius-lg)',
-      transition: 'background var(--transition-mid), border-color var(--transition-fast), box-shadow var(--transition-fast)',
-      boxShadow: isDragOver
-        ? `0 0 0 2px ${color}22, var(--shadow-column)`
-        : 'var(--shadow-column)',
-      flexShrink: 0,
-      maxHeight: 'calc(100vh - 140px)',
-      overflow: 'hidden',
-    },
-    header: {
-      padding: '14px 14px 10px',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      gap: 8,
-      flexShrink: 0,
-    },
-    titleRow: {
-      display: 'flex',
-      alignItems: 'center',
-      gap: 8,
-      minWidth: 0,
-      flex: 1,
-    },
-    colorDot: {
-      width: 8,
-      height: 8,
-      borderRadius: '50%',
-      background: color,
-      flexShrink: 0,
-    },
-    colorBar: {
-      width: 3,
-      height: 16,
-      borderRadius: 99,
-      background: color,
-      flexShrink: 0,
-    },
-    columnName: {
-      fontSize: 13,
-      fontWeight: 600,
-      color: 'var(--text-primary)',
-      whiteSpace: 'nowrap',
-      overflow: 'hidden',
-      textOverflow: 'ellipsis',
-    },
-    countBadge: {
-      fontSize: 11,
-      fontWeight: 600,
-      padding: '2px 7px',
-      borderRadius: 99,
-      background: `${color}20`,
-      color: color,
-      letterSpacing: '0.02em',
-      flexShrink: 0,
-    },
-    divider: {
-      height: 1,
-      background: 'var(--border)',
-      margin: '0 14px',
-      flexShrink: 0,
-    },
-    cardList: {
-      flex: 1,
-      overflowY: 'auto',
-      padding: '10px 10px 6px',
-      display: 'flex',
-      flexDirection: 'column',
-      gap: 8,
-      overflowX: 'hidden',
-    },
-    dropZone: (active) => ({
-      minHeight: 48,
-      borderRadius: 'var(--radius-md)',
-      border: `2px dashed ${active ? color + '60' : 'transparent'}`,
-      background: active ? `${color}08` : 'transparent',
-      transition: 'all var(--transition-fast)',
-      display: active ? 'flex' : 'none',
-      alignItems: 'center',
-      justifyContent: 'center',
-      fontSize: 12,
-      color: color,
-      fontWeight: 500,
-      flexShrink: 0,
-    }),
-    footer: {
-      padding: '8px 10px 12px',
-      flexShrink: 0,
-    },
-    addCardBtn: {
-      width: '100%',
-      padding: '7px 10px',
-      borderRadius: 'var(--radius-sm)',
-      background: 'transparent',
-      border: '1px solid transparent',
-      color: 'var(--text-muted)',
-      fontSize: 13,
-      fontWeight: 500,
-      cursor: 'pointer',
-      display: 'flex',
-      alignItems: 'center',
-      gap: 6,
-      transition: 'background var(--transition-fast), color var(--transition-fast), border-color var(--transition-fast)',
-      textAlign: 'left',
-    },
-    deleteColumnBtn: {
-  width: 24,
-  height: 24,
-  borderRadius: '50%',
-  background: 'rgba(239,68,68,0.15)',
-  border: 'none',
-  color: '#ef4444',
-  cursor: 'pointer',
-  fontSize: 14,
-  fontWeight: 700,
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  transition: 'all 0.2s ease',
-},
-  }
-}
+const CloseIcon = () => (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+    strokeWidth="2.2" strokeLinecap="round">
+    <path d="M6 6l12 12M18 6L6 18" />
+  </svg>
+)
 
+/**
+ * KanbanColumn — a frosted pane holding frosted cards.
+ *
+ * Drop targets are the gaps *between* cards rather than the cards
+ * themselves: each gap grows into a glowing slot as the drag passes
+ * over it, so the list visibly opens a space for the card being
+ * carried. Hovering the top or bottom half of a card activates the gap
+ * on that side, which keeps the whole list covered without leaving dead
+ * zones between the slots.
+ */
 export default function KanbanColumn({
   column,
   columnIndex,
+  query = '',
+  drag,
+  landedCardId,
+  columnRef,
   onAddCard,
   onDeleteCard,
   onDeleteColumn,
-  onMoveCard
+  onMoveCard,
+  onDragStart,
+  onDragEnd,
 }) {
-  console.log("onDeleteColumn", onDeleteColumn)
-  const [isDragOver, setIsDragOver] = useState(false)
+  const [hoverSlot, setHoverSlot] = useState(null)
   const [showAddCard, setShowAddCard] = useState(false)
-  const [addBtnHover, setAddBtnHover] = useState(false)
 
   const color = columnColor(columnIndex)
-  const styles = css(color, isDragOver)
+  const cards = column.cards ?? []
 
-  const handleDragOver = (e) => {
+  // Cards are filtered for display only — slot indices stay anchored to
+  // the real list, so a move made while searching still lands correctly.
+  const q = query.trim().toLowerCase()
+  const visible = q
+    ? cards.filter(c =>
+        (c.title ?? '').toLowerCase().includes(q) ||
+        (c.description ?? '').toLowerCase().includes(q))
+    : cards
+  const visibleIds = new Set(visible.map(c => c.cardId))
+
+  const isDraggingAny = Boolean(drag)
+  const fromThisColumn = drag?.columnId === column.columnId
+  const dragIndex = fromThisColumn
+    ? cards.findIndex(c => c.cardId === drag.cardId)
+    : -1
+
+  /**
+   * A slot immediately above or below the card being dragged would put
+   * it back where it started, so it never lights up.
+   */
+  const isNoop = (slot) =>
+    fromThisColumn && dragIndex >= 0 && (slot === dragIndex || slot === dragIndex + 1)
+
+  const allowDrop = (e, slot) => {
     e.preventDefault()
     e.dataTransfer.dropEffect = 'move'
-    setIsDragOver(true)
+    setHoverSlot(isNoop(slot) ? null : slot)
+  }
+
+  /** Top half of a card targets the gap above it, bottom half the gap below. */
+  const allowDropOnCard = (e, index) => {
+    const rect = e.currentTarget.getBoundingClientRect()
+    const below = e.clientY > rect.top + rect.height / 2
+    allowDrop(e, below ? index + 1 : index)
   }
 
   const handleDragLeave = (e) => {
-    // Only fire if leaving the column entirely (not just entering a child)
-    if (!e.currentTarget.contains(e.relatedTarget)) {
-      setIsDragOver(false)
-    }
+    if (!e.currentTarget.contains(e.relatedTarget)) setHoverSlot(null)
   }
 
-const handleDrop = (e, targetIndex) => {
+  const handleDrop = (e, slot) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setHoverSlot(null)
 
-  console.log("HANDLE DROP TARGET INDEX", targetIndex)
-  e.preventDefault()
-  setIsDragOver(false)
+    let data
+    try {
+      data = JSON.parse(e.dataTransfer.getData('text/plain'))
+    } catch {
+      return
+    }
+    if (!data?.cardId) return
 
-  try {
-    const data = JSON.parse(
-      e.dataTransfer.getData('text/plain')
-    )
+    const sameColumn = data.sourceColumnId === column.columnId
 
-    onMoveCard?.(
-      data.cardId,
-      data.sourceColumnId,
-      column.columnId,
-      targetIndex
-    )
+    // For a same-column move the card is pulled out of the list before
+    // being reinserted, so every slot below it shifts up by one.
+    const sourceIndex = sameColumn
+      ? cards.findIndex(c => c.cardId === data.cardId)
+      : -1
+    const target = sameColumn && sourceIndex >= 0 && slot > sourceIndex ? slot - 1 : slot
 
-  } catch (_) {}
-}
+    if (sameColumn && target === sourceIndex) return
+
+    onMoveCard?.(data.cardId, data.sourceColumnId, column.columnId, target)
+  }
+
+  // Returned as plain JSX rather than a nested component, so the slots
+  // keep their DOM identity across renders and their height transition
+  // actually plays instead of being remounted mid-animation.
+  const slot = (index) => (
+    <div
+      key={`slot-${index}`}
+      className={`brd-slot${hoverSlot === index ? ' is-active' : ''}`}
+      onDragOver={e => allowDrop(e, index)}
+      onDrop={e => handleDrop(e, index)}
+      aria-hidden="true"
+    />
+  )
+
+  const className = [
+    'brd-col',
+    hoverSlot !== null && 'is-over',
+    isDraggingAny && 'is-dragging-any',
+  ].filter(Boolean).join(' ')
 
   return (
     <>
-     <div
-  style={styles.column}
-  onDragLeave={handleDragLeave}
->
-        {/* ── Header ── */}
-        <div style={styles.header}>
-  <div style={styles.titleRow}>
-    <div style={styles.colorBar} />
-    <span
-      style={styles.columnName}
-      title={column.name}
-    >
-      {column.name}
-    </span>
-  </div>
-
-  <div
-    style={{
-      display: 'flex',
-      alignItems: 'center',
-      gap: 8,
-    }}
-  >
-    <span style={styles.countBadge}>
-      {column.cards?.length ?? 0}
-    </span>
-
-    <button
-  style={styles.deleteColumnBtn}
-  onMouseEnter={(e) => {
-    e.currentTarget.style.background = 'rgba(239,68,68,0.25)'
-  }}
-  onMouseLeave={(e) => {
-    e.currentTarget.style.background = 'rgba(239,68,68,0.15)'
-  }}
-  onClick={() => {
-    if (
-      window.confirm(
-        `Delete "${column.name}" and all cards inside it?`
-      )
-    ) {
-      onDeleteColumn?.(column.columnId)
-    }
-  }}
-  title="Delete Column"
->
-  ✕
-</button>
-  </div>
-</div>
-
-        {/* ── Cards ── */}
- <div style={styles.cardList}>
-
-  <div
-    onDragOver={handleDragOver}
-    onDrop={(e) => handleDrop(e, 0)}
-    style={{
-      height: 12,
-      borderRadius: 4,
-      background: isDragOver ? `${color}22` : 'transparent',
-      marginBottom: 4,
-    }}
-  />
-
-  {(column.cards ?? []).map((card, index) => (
-    <React.Fragment key={card.cardId}>
-
-      <TaskCard
-        card={card}
-        columnId={column.columnId}
-        onDelete={onDeleteCard}
-      />
-
-      <div
-        onDragOver={handleDragOver}
-        onDrop={(e) => handleDrop(e, index + 1)}
-        style={{
-          height: 12,
-          borderRadius: 4,
-          background: isDragOver ? `${color}22` : 'transparent',
-          marginTop: 4,
-          marginBottom: 4,
-        }}
-      />
-
-    </React.Fragment>
-  ))}
-</div>
-        {/* ── Footer ── */}
-        <div style={styles.footer}>
+      <section
+        ref={columnRef}
+        className={className}
+        style={{ '--c': color, '--d': `${Math.min(columnIndex, 8) * 55}ms` }}
+        onDragLeave={handleDragLeave}
+        aria-label={column.name}
+      >
+        <header className="brd-col-head">
+          <span className="brd-col-bar" aria-hidden="true" />
+          <h2 className="brd-col-name" title={column.name}>{column.name}</h2>
+          <span className="brd-col-count">
+            {q ? `${visible.length}/${cards.length}` : cards.length}
+          </span>
           <button
-            style={{
-              ...styles.addCardBtn,
-              ...(addBtnHover ? {
-                background: 'rgba(255,255,255,0.04)',
-                color: 'var(--text-secondary)',
-                borderColor: 'var(--border)',
-              } : {}),
+            className="brd-col-del"
+            onClick={() => {
+              if (window.confirm(`Delete "${column.name}" and all cards inside it?`)) {
+                onDeleteColumn?.(column.columnId)
+              }
             }}
-            onMouseEnter={() => setAddBtnHover(true)}
-            onMouseLeave={() => setAddBtnHover(false)}
-            onClick={() => setShowAddCard(true)}
+            title="Delete column"
+            aria-label={`Delete column ${column.name}`}
           >
-            <span style={{ fontSize: 16, lineHeight: 1 }}>+</span>
+            <CloseIcon />
+          </button>
+        </header>
+
+        <div className="brd-col-rule" />
+
+        <div className="brd-cards">
+          {slot(0)}
+
+          {cards.map((card, index) => {
+            if (q && !visibleIds.has(card.cardId)) return null
+            return (
+              <React.Fragment key={card.cardId}>
+                <div
+                  onDragOver={e => allowDropOnCard(e, index)}
+                  onDrop={e => handleDrop(e, hoverSlot ?? index)}
+                >
+                  <TaskCard
+                    card={card}
+                    columnId={column.columnId}
+                    color={color}
+                    query={query}
+                    landed={landedCardId === card.cardId}
+                    onDelete={onDeleteCard}
+                    onDragStart={onDragStart}
+                    onDragEnd={onDragEnd}
+                  />
+                </div>
+                {slot(index + 1)}
+              </React.Fragment>
+            )
+          })}
+
+          {visible.length === 0 && (
+            <div className="brd-col-empty">
+              {q ? 'No matching cards' : 'Nothing here yet'}
+            </div>
+          )}
+        </div>
+
+        <footer className="brd-col-foot">
+          <button className="brd-addcard" onClick={() => setShowAddCard(true)}>
+            <PlusIcon />
             Add card
           </button>
-        </div>
-      </div>
+        </footer>
+      </section>
 
       {showAddCard && (
         <CreateCardModal

@@ -5,116 +5,24 @@ import GraphView from '../components/dashboard/GraphView'
 import WorkspaceList from '../components/dashboard/WorkspaceList'
 import Avatar from '../components/Avatar'
 import { getDashboard, relativeTime } from '../api/dashboardApi'
+import './DashboardPage.css'
 
-const css = {
-  shell: { display: 'flex', height: '100%', background: 'var(--bg-base)', overflow: 'hidden' },
-  main: { flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 },
-
-  topbar: {
-    display: 'flex', alignItems: 'center', gap: 14, height: 58, flexShrink: 0,
-    padding: '0 22px', borderBottom: '1px solid var(--border)', background: 'var(--bg-base)',
-  },
-  search: {
-    display: 'flex', alignItems: 'center', gap: 9, flex: 1, maxWidth: 420,
-    background: 'var(--bg-card)', border: '1px solid var(--border)',
-    borderRadius: 'var(--radius-sm)', padding: '0 12px', height: 36,
-  },
-  searchInput: {
-    flex: 1, background: 'transparent', border: 'none', outline: 'none',
-    color: 'var(--text-primary)', fontSize: 13.5,
-  },
-  spacer: { flex: 1 },
-  invite: {
-    display: 'flex', alignItems: 'center', height: 36,
-    background: 'var(--bg-card)', border: '1px solid var(--border)',
-    borderRadius: 'var(--radius-sm)', padding: '0 4px 0 12px', gap: 8, maxWidth: 320,
-  },
-  inviteText: {
-    fontSize: 12, color: 'var(--text-secondary)', fontFamily: 'ui-monospace, SFMono-Regular, monospace',
-    whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 210,
-  },
-  copyBtn: (done) => ({
-    width: 28, height: 28, borderRadius: 6, background: 'transparent',
-    color: done ? 'var(--success)' : 'var(--text-muted)',
-    display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
-  }),
-  shareBtn: {
-    height: 36, padding: '0 16px', borderRadius: 'var(--radius-sm)',
-    background: 'var(--accent)', color: '#fff', fontSize: 13, fontWeight: 600,
-    cursor: 'pointer', transition: 'background var(--transition-fast)',
-  },
-  userChip: {
-    display: 'flex', alignItems: 'center', gap: 9, paddingLeft: 6,
-    borderLeft: '1px solid var(--border)', height: 30,
-  },
-  userName: { fontSize: 13, fontWeight: 600, color: 'var(--text-primary)', lineHeight: 1.15 },
-  userMail: { fontSize: 11, color: 'var(--text-muted)' },
-
-  scroll: { flex: 1, overflowY: 'auto', padding: '20px 22px 30px' },
-  topGrid: {
-    display: 'grid', gridTemplateColumns: 'minmax(280px, 0.9fr) minmax(0, 2fr)',
-    gap: 24, alignItems: 'stretch', height: 440, marginBottom: 22,
-    gridAutoRows: 'minmax(0, 1fr)',
-  },
-  banner: {
-    display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16,
-    background: 'rgba(251,191,36,0.08)', border: '1px solid rgba(251,191,36,0.25)',
-    color: 'var(--warning)', borderRadius: 'var(--radius-md)',
-    padding: '9px 13px', fontSize: 12.5, fontWeight: 500,
-  },
-  center: {
-    flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center',
-    justifyContent: 'center', gap: 12, color: 'var(--text-muted)',
-  },
-  spinner: {
-    width: 26, height: 26, border: '2.5px solid rgba(255,255,255,0.08)',
-    borderTop: '2.5px solid var(--accent)', borderRadius: '50%',
-    animation: 'spin 0.8s linear infinite',
-  },
-  toast: {
-    position: 'fixed', bottom: 22, left: '50%', transform: 'translateX(-50%)',
-    background: 'var(--bg-modal)', border: '1px solid var(--border-input)',
-    color: 'var(--text-primary)', fontSize: 13, fontWeight: 500,
-    padding: '10px 16px', borderRadius: 99, boxShadow: 'var(--shadow-modal)',
-    zIndex: 900, animation: 'fadeIn 140ms ease',
-  },
-
-  // ── Workspace boards drawer ──
-  overlay: {
-    position: 'fixed', inset: 0, background: 'var(--bg-overlay)', backdropFilter: 'blur(3px)',
-    display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: 20,
-  },
-  drawer: {
-    background: 'var(--bg-modal)', border: '1px solid var(--border)',
-    borderRadius: 'var(--radius-xl)', padding: 24, width: '100%', maxWidth: 440,
-    boxShadow: 'var(--shadow-modal)', animation: 'slideUp 180ms ease',
-  },
-  drawerHead: { display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 4 },
-  drawerTitle: { fontSize: 18, fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '-0.02em' },
-  drawerSub: { fontSize: 12.5, color: 'var(--text-muted)', marginBottom: 18 },
-  closeBtn: {
-    width: 28, height: 28, borderRadius: 7, background: 'transparent',
-    color: 'var(--text-muted)', fontSize: 17, display: 'flex',
-    alignItems: 'center', justifyContent: 'center', cursor: 'pointer', lineHeight: 1,
-  },
-  boardRow: {
-    display: 'flex', alignItems: 'center', gap: 12, width: '100%',
-    background: 'var(--bg-card)', border: '1px solid var(--border)',
-    borderRadius: 'var(--radius-md)', padding: '11px 13px', marginBottom: 8,
-    cursor: 'pointer', textAlign: 'left',
-    transition: 'border-color var(--transition-fast), background var(--transition-fast)',
-  },
-  boardMark: {
-    width: 30, height: 30, borderRadius: 8, background: 'var(--accent-light)',
-    color: 'var(--accent)', display: 'flex', alignItems: 'center',
-    justifyContent: 'center', fontSize: 14, flexShrink: 0,
-  },
-  boardName: { fontSize: 13.5, fontWeight: 600, color: 'var(--text-primary)' },
-  boardMeta: { fontSize: 11.5, color: 'var(--text-muted)', marginTop: 1 },
+/**
+ * DashboardPage — the signed-in home.
+ *
+ * Frosted panels floating over a drifting aurora ground, sharing the
+ * landing page's typography and blue. All of its styling lives in
+ * DashboardPage.css under the .dash scope, so the dark board shell is
+ * untouched by it.
+ */
+const SECTION_LABEL = {
+  dashboard: 'Overview',
+  graph: 'Graph view',
+  workspaces: 'Workspaces',
 }
 
 const SearchIcon = () => (
-  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
     strokeWidth="1.9" strokeLinecap="round">
     <circle cx="11" cy="11" r="7" /><path d="m20 20-3.6-3.6" />
   </svg>
@@ -129,11 +37,39 @@ const CopyIcon = ({ done }) => (
   </svg>
 )
 
+const Chevron = () => (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+    strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M9 6l6 6-6 6" />
+  </svg>
+)
+
+const Aurora = () => (
+  <div className="dsh-aurora" aria-hidden="true">
+    <i className="dsh-orb-a" style={{ '--dx': '6%',  '--dy': '5%',  '--dur': '28s' }} />
+    <i className="dsh-orb-b" style={{ '--dx': '-5%', '--dy': '7%',  '--dur': '32s', '--delay': '-6s' }} />
+    <i className="dsh-orb-c" style={{ '--dx': '4%',  '--dy': '-6%', '--dur': '26s', '--delay': '-12s' }} />
+    <i className="dsh-orb-d" style={{ '--dx': '-7%', '--dy': '-4%', '--dur': '34s', '--delay': '-3s' }} />
+  </div>
+)
+
+/** Shell used by every state, so the background never flashes between them. */
+function Shell({ children, ...rail }) {
+  return (
+    <div className="dash">
+      <Aurora />
+      <Sidebar {...rail} />
+      {children}
+    </div>
+  )
+}
+
 export default function DashboardPage({ user, onOpenBoard, onSignOut }) {
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(true)
   const [query, setQuery] = useState('')
   const [nav, setNav] = useState('dashboard')
+  const [collapsed, setCollapsed] = useState(false)
   const [copied, setCopied] = useState(false)
   const [toast, setToast] = useState(null)
   const [openWs, setOpenWs] = useState(null)
@@ -205,109 +141,121 @@ export default function DashboardPage({ user, onOpenBoard, onSignOut }) {
     }
   }, [data])
 
-  if (!loading && !data) {
-    return (
-      <div style={css.shell}>
-        <Sidebar active="dashboard" onNavigate={() => {}} onSignOut={onSignOut} />
-        <div style={{ ...css.main, ...css.center }}>
-          <span style={{ fontSize: 26, opacity: 0.5 }}>⚠️</span>
-          <span style={{ fontSize: 14 }}>Couldn't load your dashboard.</span>
-        </div>
-      </div>
-    )
+  const rail = {
+    active: nav,
+    collapsed,
+    user,
+    onNavigate: navigate,
+    onSignOut,
   }
 
-  if (loading) {
+  if (loading || !data) {
     return (
-      <div style={css.shell}>
-        <Sidebar active="dashboard" onNavigate={() => {}} onSignOut={onSignOut} />
-        <div style={{ ...css.main, ...css.center }}>
-          <div style={css.spinner} />
-          <span style={{ fontSize: 14 }}>Loading your workspaces…</span>
+      <Shell {...rail} onNavigate={() => {}}>
+        <div className="dsh-main">
+          <div className="dsh-center">
+            {loading
+              ? <><div className="dsh-spinner" /><span>Loading your workspaces…</span></>
+              : <><span style={{ fontSize: 26 }}>⚠️</span><span>Couldn't load your dashboard.</span></>}
+          </div>
         </div>
-      </div>
+      </Shell>
     )
   }
 
   return (
-    <div style={css.shell}>
-      <style>{`
-        @media (max-width: 1080px) {
-          .dash-top-grid { grid-template-columns: 1fr !important; height: auto !important; }
-          .dash-graph { min-height: 380px; }
-        }
-        @media (max-width: 720px) {
-          .dash-invite { display: none !important; }
-          .dash-user-text { display: none !important; }
-        }
-      `}</style>
-
-      <Sidebar active={nav} onNavigate={navigate} onSignOut={onSignOut} />
-
-      <div style={css.main}>
+    <Shell {...rail}>
+      <div className="dsh-main">
         {/* ── Top bar ── */}
-        <header style={css.topbar}>
-          <div style={css.search}>
-            <span style={{ color: 'var(--text-muted)', display: 'flex' }}><SearchIcon /></span>
+        <header className="dsh-topbar dsh-glass">
+          <button
+            className="dsh-iconbtn dsh-collapse"
+            onClick={() => setCollapsed(c => !c)}
+            aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+            aria-expanded={!collapsed}
+          >
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+              strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"
+              style={{ transform: collapsed ? 'scaleX(-1)' : 'none' }}>
+              <path d="M20 12H5" /><path d="m10 7-5 5 5 5" />
+            </svg>
+          </button>
+
+          <div className="dsh-search">
+            <SearchIcon />
             <input
-              style={css.searchInput}
               placeholder="Search workspaces, teams, boards…"
               value={query}
               onChange={e => setQuery(e.target.value)}
               aria-label="Search"
             />
           </div>
-          <div style={css.spacer} />
 
-          <div className="dash-invite" style={css.invite}>
-            <span style={css.inviteText} title={inviteLink}>{inviteLink}</span>
-            <button style={css.copyBtn(copied)} onClick={copyInvite}
-              aria-label="Copy invite link" title="Copy invite link">
+          <div className="dsh-spacer" />
+
+          <div className="dsh-invite">
+            <span className="dsh-invite-text" title={inviteLink}>{inviteLink}</span>
+            <button
+              className={`dsh-copybtn${copied ? ' is-done' : ''}`}
+              onClick={copyInvite}
+              aria-label="Copy invite link"
+              title="Copy invite link"
+            >
               <CopyIcon done={copied} />
             </button>
           </div>
 
           <button
-            style={css.shareBtn}
+            className="dsh-cta"
             onClick={() => { copyInvite(); setToast('Invite link copied to your clipboard') }}
-            onMouseEnter={e => { e.currentTarget.style.background = 'var(--accent-hover)' }}
-            onMouseLeave={e => { e.currentTarget.style.background = 'var(--accent)' }}
           >
-            Invite
+            <span className="dsh-cta-text">Invite</span>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+              strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M16 20v-1.5a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4V20" />
+              <path d="M9 10.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7z" />
+              <path d="M19 8v6" /><path d="M22 11h-6" />
+            </svg>
           </button>
 
-          <div style={css.userChip}>
-            <Avatar name={user?.name || 'Guest'} size={30} />
-            <div className="dash-user-text">
-              <div style={css.userName}>{user?.name || 'Guest'}</div>
-              <div style={css.userMail}>{user?.email || 'not signed in'}</div>
-            </div>
-          </div>
+          <span className="dsh-avatar-ring"><Avatar name={user?.name || 'Guest'} size={32} /></span>
         </header>
 
         {/* ── Content ── */}
-        <div style={css.scroll} ref={scrollRef}>
-          {data && !data.live && (
-            <div style={css.banner}>
+        <div className="dsh-scroll" ref={scrollRef}>
+          <div className="dsh-crumbbar dsh-glass dsh-in">
+            <div>
+              <h1 className="dsh-pagetitle">
+                {(user?.name || 'there').split(' ')[0]}'s dashboard
+              </h1>
+            </div>
+            <nav className="dsh-crumbs" aria-label="Breadcrumb">
+              <span>Home</span><Chevron />
+              <span>Dashboard</span><Chevron />
+              <span className="dsh-crumb-now">{SECTION_LABEL[nav] || 'Overview'}</span>
+            </nav>
+          </div>
+
+          {!data.live && (
+            <div className="dsh-banner dsh-in" style={{ '--in': '60ms' }}>
               <span>◇</span>
               Showing sample data — the backend has no <code>GET /workspace/mine</code> endpoint yet.
             </div>
           )}
 
-          <div className="dash-top-grid" style={css.topGrid}>
-            <StatCards
-              stats={stats}
-              workspaces={workspaces}
-              onOpenWorkspace={openWorkspace}
-              onOpenBoard={onOpenBoard}
+          <StatCards
+            stats={stats}
+            workspaces={workspaces}
+            onOpenWorkspace={openWorkspace}
+            onOpenBoard={onOpenBoard}
+          />
+
+          <div ref={graphRef}>
+            <GraphView
+              workspaces={filtered}
+              userName={user?.name}
+              onSelectWorkspace={openWorkspace}
             />
-            <div className="dash-graph" ref={graphRef} style={{ minWidth: 0, minHeight: 0 }}>
-              <GraphView
-                workspaces={filtered}
-                userName={user?.name}
-                onSelectWorkspace={openWorkspace}
-              />
-            </div>
           </div>
 
           <div ref={listRef}>
@@ -323,38 +271,37 @@ export default function DashboardPage({ user, onOpenBoard, onSignOut }) {
 
       {/* ── Boards drawer ── */}
       {openWs && (
-        <div style={css.overlay} onClick={() => setOpenWs(null)}>
-          <div style={css.drawer} onClick={e => e.stopPropagation()} role="dialog" aria-modal="true">
-            <div style={css.drawerHead}>
-              <div>
-                <div style={css.drawerTitle}>{openWs.name}</div>
-              </div>
-              <button style={css.closeBtn} onClick={() => setOpenWs(null)} aria-label="Close">×</button>
+        <div className="dsh-overlay" onClick={() => setOpenWs(null)}>
+          <div className="dsh-drawer" onClick={e => e.stopPropagation()} role="dialog" aria-modal="true">
+            <div className="dsh-drawer-head">
+              <div className="dsh-drawer-title">{openWs.name}</div>
+              <button className="dsh-iconbtn" onClick={() => setOpenWs(null)} aria-label="Close">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                  strokeWidth="2" strokeLinecap="round"><path d="M6 6l12 12" /><path d="M18 6 6 18" /></svg>
+              </button>
             </div>
-            <div style={css.drawerSub}>
+            <div className="dsh-drawer-sub">
               {openWs.teams.length} teams · {openWs.members.length} members · you are {openWs.role.toLowerCase()}
             </div>
             {openWs.boards.map(b => (
               <button
                 key={b.boardId}
-                style={css.boardRow}
+                className="dsh-boardrow"
                 onClick={() => { setOpenWs(null); onOpenBoard?.(b.boardId, openWs) }}
-                onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--border-focus)' }}
-                onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border)' }}
               >
-                <span style={css.boardMark}>⊞</span>
+                <span className="dsh-boardmark">⊞</span>
                 <span style={{ flex: 1 }}>
-                  <span style={{ ...css.boardName, display: 'block' }}>{b.name}</span>
-                  <span style={css.boardMeta}>{b.done}/{b.cards} cards done</span>
+                  <span className="dsh-boardname">{b.name}</span>
+                  <span className="dsh-boardmeta">{b.done}/{b.cards} cards done</span>
                 </span>
-                <span style={{ color: 'var(--text-muted)' }}>›</span>
+                <Chevron />
               </button>
             ))}
           </div>
         </div>
       )}
 
-      {toast && <div style={css.toast}>{toast}</div>}
-    </div>
+      {toast && <div className="dsh-toast">{toast}</div>}
+    </Shell>
   )
 }

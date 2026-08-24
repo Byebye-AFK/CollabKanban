@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
-import { COLUMN_COLORS } from '../Avatar'
+const GRAPH_COLORS = ['#2E6BF6', '#7C6FF7', '#14B88A', '#E9A13B', '#F0637A', '#38BDF8']
 
 /**
  * GraphView — an Obsidian-style force-directed map of the user's org.
@@ -10,6 +10,19 @@ import { COLUMN_COLORS } from '../Avatar'
  * gravity) on a 2D canvas. The graph is tiny (tens of nodes), so the O(n²)
  * repulsion pass is cheaper than pulling in a layout dependency.
  */
+
+// ── Palette ──────────────────────────────────────────────────
+// Node colours are drawn to a canvas, so they can't be CSS tokens.
+// These mirror the dashboard's glass palette.
+const ROOT_COLOR  = '#10131F'
+const ROOT_RING   = 'rgba(46,107,246,0.85)'
+const LINK_ON     = 'rgba(58,65,85,0.30)'
+const LINK_OFF    = 'rgba(58,65,85,0.08)'
+const LABEL_HALO  = 'rgba(255,255,255,0.92)'
+const LABEL_STRONG = '#10131F'
+const LABEL_MUTED  = '#646C82'
+const TIP_BG      = 'rgba(255,255,255,0.96)'
+const TIP_LINE    = 'rgba(16,19,31,0.10)'
 
 // ── Simulation constants ─────────────────────────────────────
 const REPULSION   = 4600
@@ -25,11 +38,11 @@ function buildGraph(workspaces, userName) {
 
   nodes.push({
     id: 'me', type: 'root', label: userName || 'You',
-    r: 11, color: '#E8E9F4', x: 0, y: 0, vx: 0, vy: 0,
+    r: 11, color: ROOT_COLOR, x: 0, y: 0, vx: 0, vy: 0,
   })
 
   workspaces.forEach((ws, i) => {
-    const color = COLUMN_COLORS[i % COLUMN_COLORS.length]
+    const color = GRAPH_COLORS[i % GRAPH_COLORS.length]
     const wsId = `w${ws.workspaceId}`
     nodes.push({
       id: wsId, type: 'workspace', label: ws.name, ref: ws,
@@ -60,54 +73,10 @@ function buildGraph(workspaces, userName) {
   return { nodes, links }
 }
 
-const css = {
-  panel: { display: 'flex', flexDirection: 'column', minWidth: 0, minHeight: 0, height: '100%' },
-  head: {
-    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-    gap: 12, marginBottom: 14, flexWrap: 'wrap',
-  },
-  title: {
-    fontSize: 17, fontWeight: 700, color: 'var(--text-primary)',
-    letterSpacing: '-0.02em',
-  },
-  sub: { fontSize: 12, color: 'var(--text-muted)', marginTop: 2 },
-  controls: { display: 'flex', alignItems: 'center', gap: 8 },
-  select: {
-    background: 'var(--bg-card)', border: '1px solid var(--border-input)',
-    color: 'var(--text-primary)', fontSize: 12.5, fontWeight: 500,
-    borderRadius: 'var(--radius-sm)', padding: '7px 10px', outline: 'none',
-    cursor: 'pointer',
-  },
-  iconBtn: {
-    width: 32, height: 32, borderRadius: 'var(--radius-sm)',
-    background: 'var(--bg-card)', border: '1px solid var(--border-input)',
-    color: 'var(--text-secondary)', display: 'flex',
-    alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
-    transition: 'color var(--transition-fast), background var(--transition-fast)',
-  },
-  canvasWrap: {
-    position: 'relative', flex: 1, minHeight: 0,
-    borderRadius: 'var(--radius-lg)',
-    border: '1px solid var(--border)',
-    background:
-      'radial-gradient(circle at 50% 45%, rgba(124,111,247,0.10), transparent 62%), var(--bg-board)',
-    overflow: 'hidden',
-  },
-  canvas: { display: 'block', width: '100%', height: '100%', cursor: 'grab' },
-  legend: {
-    position: 'absolute', left: 14, bottom: 12, display: 'flex',
-    gap: 14, alignItems: 'center', pointerEvents: 'none',
-  },
-  legendItem: { display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, color: 'var(--text-muted)' },
-  dot: (size, bg, ring) => ({
-    width: size, height: size, borderRadius: '50%', background: bg,
-    boxShadow: ring ? `0 0 0 2px ${ring}` : 'none',
-  }),
-  hint: {
-    position: 'absolute', right: 14, bottom: 12, fontSize: 11,
-    color: 'var(--text-muted)', pointerEvents: 'none',
-  },
-}
+
+const dot = (size, background) => ({
+  display: 'inline-block', width: size, height: size, borderRadius: '50%', background,
+})
 
 export default function GraphView({ workspaces, userName, onSelectWorkspace }) {
   const wrapRef = useRef(null)
@@ -259,7 +228,7 @@ export default function GraphView({ workspaces, userName, onSelectWorkspace }) {
         const n1 = map.get(l.source), n2 = map.get(l.target)
         if (!n1 || !n2) continue
         const on = !lit || (lit.has(n1.id) && lit.has(n2.id))
-        ctx.strokeStyle = on ? 'rgba(180,186,214,0.32)' : 'rgba(180,186,214,0.07)'
+        ctx.strokeStyle = on ? LINK_ON : LINK_OFF
         ctx.lineWidth = on && lit ? 1.4 : 1
         ctx.beginPath()
         ctx.moveTo(n1.x, n1.y)
@@ -274,18 +243,19 @@ export default function GraphView({ workspaces, userName, onSelectWorkspace }) {
         ctx.globalAlpha = on ? 1 : 0.22
 
         if (on && (n.type !== 'team' || isHover)) {
+          // Softer glow: on a light ground a wide bloom turns to haze.
           ctx.shadowColor = n.color
-          ctx.shadowBlur = isHover ? 22 : n.type === 'root' ? 10 : 14
+          ctx.shadowBlur = isHover ? 16 : n.type === 'root' ? 8 : 10
         }
         ctx.beginPath()
         ctx.arc(n.x, n.y, n.r + (isHover ? 2 : 0), 0, Math.PI * 2)
-        ctx.fillStyle = n.type === 'team' ? `${n.color}B0` : n.color
+        ctx.fillStyle = n.type === 'team' ? `${n.color}A0` : n.color
         ctx.fill()
         ctx.shadowBlur = 0
 
         if (n.type === 'root') {
           ctx.lineWidth = 2
-          ctx.strokeStyle = 'rgba(124,111,247,0.9)'
+          ctx.strokeStyle = ROOT_RING
           ctx.beginPath()
           ctx.arc(n.x, n.y, n.r + 4.5, 0, Math.PI * 2)
           ctx.stroke()
@@ -301,13 +271,13 @@ export default function GraphView({ workspaces, userName, onSelectWorkspace }) {
         const isHover = s.hover === n.id
         if (n.type === 'team' && !isHover && !(lit && lit.has(n.id))) continue
         ctx.globalAlpha = on ? 1 : 0.22
-        ctx.font = `${n.type === 'team' ? 500 : 600} ${n.type === 'team' ? 10.5 : 12}px Inter, system-ui, sans-serif`
+        ctx.font = `${n.type === 'team' ? 500 : 600} ${n.type === 'team' ? 10.5 : 12}px Figtree, Inter, system-ui, sans-serif`
         ctx.textAlign = 'center'
         ctx.textBaseline = 'top'
         ctx.lineWidth = 3
-        ctx.strokeStyle = 'rgba(17,19,32,0.85)' // halo keeps labels readable over links
+        ctx.strokeStyle = LABEL_HALO // halo keeps labels readable over links
         ctx.strokeText(n.label, n.x, n.y + n.r + 6)
-        ctx.fillStyle = n.type === 'team' ? '#8B90A7' : '#E8E9F4'
+        ctx.fillStyle = n.type === 'team' ? LABEL_MUTED : LABEL_STRONG
         ctx.fillText(n.label, n.x, n.y + n.r + 6)
         ctx.globalAlpha = 1
       }
@@ -320,9 +290,9 @@ export default function GraphView({ workspaces, userName, onSelectWorkspace }) {
             n.type === 'workspace'
               ? [n.label, `${n.ref.teams.length} teams · ${n.ref.boards.length} boards · ${n.ref.members.length} members`]
               : [n.label, `${n.ref.memberCount} members`]
-          ctx.font = '600 12px Inter, system-ui, sans-serif'
+          ctx.font = '600 12px Figtree, Inter, system-ui, sans-serif'
           const w = Math.max(...lines.map((t, i) => {
-            ctx.font = `${i === 0 ? 600 : 500} ${i === 0 ? 12 : 11}px Inter, system-ui, sans-serif`
+            ctx.font = `${i === 0 ? 600 : 500} ${i === 0 ? 12 : 11}px Figtree, Inter, system-ui, sans-serif`
             return ctx.measureText(t).width
           })) + 20
           const h = 44
@@ -331,8 +301,8 @@ export default function GraphView({ workspaces, userName, onSelectWorkspace }) {
           if (bx + w > size.w - 6) bx = n.x - n.r - 12 - w
           by = Math.min(size.h - h - 6, Math.max(6, by))
 
-          ctx.fillStyle = 'rgba(26,29,46,0.96)'
-          ctx.strokeStyle = 'rgba(255,255,255,0.10)'
+          ctx.fillStyle = TIP_BG
+          ctx.strokeStyle = TIP_LINE
           ctx.lineWidth = 1
           ctx.beginPath()
           if (ctx.roundRect) ctx.roundRect(bx, by, w, h, 8)
@@ -342,11 +312,11 @@ export default function GraphView({ workspaces, userName, onSelectWorkspace }) {
 
           ctx.textAlign = 'left'
           ctx.textBaseline = 'top'
-          ctx.font = '600 12px Inter, system-ui, sans-serif'
-          ctx.fillStyle = '#E8E9F4'
+          ctx.font = '600 12px Figtree, Inter, system-ui, sans-serif'
+          ctx.fillStyle = LABEL_STRONG
           ctx.fillText(lines[0], bx + 10, by + 9)
-          ctx.font = '500 11px Inter, system-ui, sans-serif'
-          ctx.fillStyle = '#8B90A7'
+          ctx.font = '500 11px Figtree, Inter, system-ui, sans-serif'
+          ctx.fillStyle = LABEL_MUTED
           ctx.fillText(lines[1], bx + 10, by + 25)
         }
       }
@@ -447,22 +417,20 @@ export default function GraphView({ workspaces, userName, onSelectWorkspace }) {
   const teamTotal = visible.reduce((n, w) => n + w.teams.length, 0)
 
   return (
-    <section style={css.panel} aria-label="Graph view">
-      <div style={css.head}>
+    <section className="dsh-panel dsh-glass dsh-in is-graph" style={{ '--in': '180ms' }} aria-label="Graph view">
+      <div className="dsh-panel-head">
         <div>
-          <h2 style={css.title}>Graph View</h2>
-          <div style={css.sub}>
+          <h2 className="dsh-sec-title">Graph View</h2>
+          <div className="dsh-sec-sub">
             {visible.length} workspaces · {teamTotal} teams — drag a node, click a workspace to open it
           </div>
         </div>
-        <div style={css.controls}>
+        <div className="dsh-panel-actions">
           <button
-            style={css.iconBtn}
+            className="dsh-iconbtn"
             onClick={reheat}
             title="Re-layout graph"
             aria-label="Re-layout graph"
-            onMouseEnter={e => { e.currentTarget.style.color = 'var(--text-primary)' }}
-            onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-secondary)' }}
           >
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"
               strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
@@ -470,7 +438,7 @@ export default function GraphView({ workspaces, userName, onSelectWorkspace }) {
             </svg>
           </button>
           <select
-            style={css.select}
+            className="dsh-select"
             value={scope}
             onChange={e => setScope(e.target.value)}
             aria-label="Graph scope"
@@ -483,20 +451,16 @@ export default function GraphView({ workspaces, userName, onSelectWorkspace }) {
         </div>
       </div>
 
-      <div style={css.canvasWrap} ref={wrapRef}>
-        <canvas ref={canvasRef} style={css.canvas} />
-        <div style={css.legend}>
-          <span style={css.legendItem}>
-            <span style={css.dot(9, '#E8E9F4', 'rgba(124,111,247,0.9)')} /> You
+      <div className="dsh-canvas-wrap" ref={wrapRef}>
+        <canvas ref={canvasRef} />
+        <div className="dsh-legend">
+          <span>
+            <i style={{ ...dot(9, ROOT_COLOR), boxShadow: `0 0 0 2px ${ROOT_RING}` }} /> You
           </span>
-          <span style={css.legendItem}>
-            <span style={css.dot(11, 'var(--accent)')} /> Workspace
-          </span>
-          <span style={css.legendItem}>
-            <span style={css.dot(6, 'rgba(124,111,247,0.7)')} /> Team
-          </span>
+          <span><i style={dot(11, '#2E6BF6')} /> Workspace</span>
+          <span><i style={dot(6, 'rgba(124,111,247,0.75)')} /> Team</span>
         </div>
-        <div style={css.hint}>node size = team count</div>
+        <div className="dsh-hint">node size = team count</div>
       </div>
     </section>
   )
