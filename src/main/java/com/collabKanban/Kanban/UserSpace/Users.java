@@ -1,5 +1,6 @@
 package com.collabKanban.Kanban.UserSpace;
 
+import com.collabKanban.Kanban.Team.TeamMembers;
 import com.collabKanban.Kanban.WorkSpace.WorkspaceMembers;
 import jakarta.persistence.*;
 import lombok.Getter;
@@ -30,6 +31,9 @@ public class Users {
 
     @OneToMany( mappedBy = "user",cascade = CascadeType.ALL)
     private List<WorkspaceMembers> memberships=new ArrayList<>();
+
+    @OneToMany(mappedBy = "members",cascade = CascadeType.ALL)
+    private List<TeamMembers> teams=new ArrayList<>();
 
 
 

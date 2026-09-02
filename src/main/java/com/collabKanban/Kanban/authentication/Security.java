@@ -13,6 +13,12 @@ import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.web.bind.annotation.CrossOrigin;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+
+import java.util.List;
 
 
 @Configuration
@@ -34,7 +40,7 @@ public class Security {
     public SecurityFilterChain filterChain(HttpSecurity security){
 
            security.csrf(csrfConfigurer-> csrfConfigurer.disable());
-
+           security.cors(Customizer.withDefaults());
            security.authorizeHttpRequests(authorize-> authorize
                    .requestMatchers("/user/**","/oauth2/**","/ws/**").permitAll()
                    .anyRequest().authenticated());
@@ -62,6 +68,23 @@ public class Security {
 
         return configuration.getAuthenticationManager();
      }
+
+    @Bean
+    public CorsConfigurationSource corsConfigurationSource(){
+        CorsConfiguration config=new CorsConfiguration();
+        config.setAllowedHeaders(List.of("*"));
+        config.setAllowedOrigins(List.of("http://localhost:5173"));
+        config.setAllowCredentials(true);
+        config.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
+        config.setExposedHeaders(List.of("Authorization"));
+        config.setMaxAge(3600L);
+
+        UrlBasedCorsConfigurationSource source=new UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/**",config);
+        return  source;
+
+
+    }
 
 
 

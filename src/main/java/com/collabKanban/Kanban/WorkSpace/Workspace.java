@@ -1,6 +1,7 @@
 package com.collabKanban.Kanban.WorkSpace;
 
 import com.collabKanban.Kanban.Boards.Board;
+import com.collabKanban.Kanban.Team.Team;
 import jakarta.persistence.*;
 import lombok.Getter;
 
@@ -26,5 +27,8 @@ public class Workspace {
 
     @OneToMany(mappedBy = "workspace",cascade = CascadeType.ALL) //Board and Workspace relationship
     List<Board>boards=new ArrayList<>();
+
+    @OneToMany(mappedBy = "workspaces",cascade = CascadeType.ALL)
+    List<Team> teamsBworkspace=new ArrayList<>();
 
 }

@@ -34,7 +34,7 @@ public class JwtService {
     }
 
     public String generateToken(String email) {
-        System.out.println("TOken is generated");
+        System.out.println("Token is generated");
         Map<String, Object> claims = new HashMap<>();
         return Jwts.builder()
                 .claims()
@@ -54,7 +54,7 @@ public class JwtService {
     }
 
     public String extractUserName(String token) {
-        // extract the username from jwt token
+        // extract the subject from jwt token
         return extractClaim(token, Claims::getSubject);
     }
 
