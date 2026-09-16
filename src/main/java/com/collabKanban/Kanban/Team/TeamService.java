@@ -17,6 +17,7 @@ public class TeamService {
     public String createTeam(String name){
       Team team=new Team();
       team.setName(name);
+     repo.save(team);
 
     return name;
     }

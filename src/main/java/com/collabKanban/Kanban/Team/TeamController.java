@@ -1,23 +1,23 @@
 package com.collabKanban.Kanban.Team;
 
+import com.collabKanban.Kanban.DTO.TeamMemberCreateReq;
+import com.collabKanban.Kanban.Response.TeamMemberRes;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("team")
 public class TeamController {
 
     TeamService teamService;
+    TeamMembersService membersService;
 
-    @Autowired
-    public void setTeamService(TeamService service){
+    public  TeamController(TeamService service,TeamMembersService membersService){
 
         teamService=service;
+        this.membersService=membersService;
     }
 
     @PostMapping("/add/{name}")
@@ -27,6 +27,23 @@ public class TeamController {
 
 
     }
+
+    @PostMapping("/addMember")
+    public ResponseEntity<TeamMemberRes> addMember(@RequestBody TeamMemberCreateReq req){
+
+        return new ResponseEntity<>(membersService.addMembers(req),HttpStatus.OK);
+
+    }
+
+
+    @DeleteMapping("/removeMember")
+    public ResponseEntity<TeamMemberRes> removeMember(@RequestBody TeamMemberCreateReq req){
+
+
+        return new ResponseEntity<>(membersService.removeMembers(req),HttpStatus.OK);
+    }
+
+
 
 
 

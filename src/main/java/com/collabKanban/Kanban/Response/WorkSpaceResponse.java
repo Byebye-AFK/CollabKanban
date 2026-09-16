@@ -1,6 +1,8 @@
 package com.collabKanban.Kanban.Response;
 
 import com.collabKanban.Kanban.Boards.Board;
+import com.collabKanban.Kanban.Team.Team;
+import com.collabKanban.Kanban.Team.TeamRepo;
 import com.collabKanban.Kanban.UserSpace.Users;
 import com.collabKanban.Kanban.WorkSpace.Role;
 import jakarta.persistence.EnumType;
@@ -19,7 +21,10 @@ public class WorkSpaceResponse {
     private String name ;
     @Enumerated(EnumType.STRING)
     private Role role;
-    private List<Users> members;
-    private List<Board> boards;
+
+    private List<UserResponse> members;
+    private List<BoardResponse> boards;
+    private List<TeamResponse> teams;
+
 
 }
