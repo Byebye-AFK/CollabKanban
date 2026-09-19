@@ -32,10 +32,12 @@ public class WorkspaceController {
 
     }
 
-    @GetMapping("/mine/{token}")
-    public ResponseEntity<List<WorkSpaceResponse>> getWorkspace(@PathVariable String token){
+    @GetMapping("/mine")
+    public ResponseEntity<List<WorkSpaceResponse>> getWorkspace(@RequestHeader("Authorization") String authHeader){
 
-        System.out.println("Gettig Workspace of the user ");
+        String token=authHeader.replace("Bearer ","");
+
+        System.out.println("Getting Workspace of the user ");
 
        List<WorkSpaceResponse> response=workspaceService.getMyWorkspaces(token);
 

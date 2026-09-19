@@ -14,6 +14,9 @@ public class Card {
     @Id
     public Long cardId;
 
+    @Version
+    private Long version;
+
     @ManyToOne
     @JoinColumn(name="assignedBy")
     public Users assignedBy;
