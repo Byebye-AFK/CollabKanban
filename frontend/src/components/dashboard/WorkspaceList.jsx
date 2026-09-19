@@ -1,33 +1,26 @@
 import React, { useMemo, useState } from 'react'
 import Avatar from '../Avatar'
+import { PALETTE as COLORS } from '../shell/palette'
 
 /**
  * WorkspaceList — every workspace the user belongs to, with its teams,
- * boards, member stack, role and completion, on a glass panel.
+ * boards, member stack and role, on a glass panel.
  */
-const COLORS = ['#2E6BF6', '#7C6FF7', '#14B88A', '#E9A13B', '#F0637A', '#38BDF8']
 
 const SORTS = [
-  { id: 'recent',   label: 'Recently active' },
   { id: 'name',     label: 'Name (A–Z)' },
-  { id: 'progress', label: 'Progress' },
   { id: 'boards',   label: 'Most boards' },
 ]
 
-const progressColor = (pct) =>
-  pct >= 80 ? 'var(--mint)' : pct >= 45 ? 'var(--blue)' : 'var(--amber)'
-
-export default function WorkspaceList({ workspaces, onOpenWorkspace, onCreateWorkspace, relativeTime }) {
-  const [sort, setSort] = useState('recent')
+export default function WorkspaceList({ workspaces, onOpenWorkspace, onCreateWorkspace }) {
+  const [sort, setSort] = useState('name')
   const [menuOpen, setMenuOpen] = useState(false)
 
   const rows = useMemo(() => {
     const copy = [...workspaces]
     switch (sort) {
-      case 'name':     return copy.sort((a, b) => a.name.localeCompare(b.name))
-      case 'progress': return copy.sort((a, b) => b.progress - a.progress)
       case 'boards':   return copy.sort((a, b) => b.boards.length - a.boards.length)
-      default:         return copy.sort((a, b) => b.lastActive - a.lastActive)
+      default:         return copy.sort((a, b) => a.name.localeCompare(b.name))
     }
   }, [workspaces, sort])
 
@@ -86,12 +79,11 @@ export default function WorkspaceList({ workspaces, onOpenWorkspace, onCreateWor
               <th>Boards</th>
               <th>Members</th>
               <th>Your Role</th>
-              <th>Cards Done</th>
             </tr>
           </thead>
           <tbody>
             {rows.length === 0 && (
-              <tr><td className="dsh-empty" colSpan={6}>You aren't in any workspace yet.</td></tr>
+              <tr><td className="dsh-empty" colSpan={5}>You aren't in any workspace yet.</td></tr>
             )}
             {rows.map((ws, i) => {
               const color = COLORS[i % COLORS.length]
@@ -110,7 +102,7 @@ export default function WorkspaceList({ workspaces, onOpenWorkspace, onCreateWor
                       <span>
                         <span className="dsh-ws-name">{ws.name}</span>
                         <span className="dsh-ws-id">
-                          ID {String(ws.workspaceId).padStart(6, '0')} · {relativeTime(ws.lastActive)}
+                          ID {String(ws.workspaceId).padStart(6, '0')}
                         </span>
                       </span>
                     </div>
@@ -129,14 +121,6 @@ export default function WorkspaceList({ workspaces, onOpenWorkspace, onCreateWor
                     </div>
                   </td>
                   <td><span className={`dsh-role ${ws.role}`}>{ws.role}</span></td>
-                  <td>
-                    <div className="dsh-progress">
-                      <span className="dsh-track">
-                        <i style={{ width: `${ws.progress}%`, background: progressColor(ws.progress) }} />
-                      </span>
-                      <span className="dsh-pct">{ws.progress}%</span>
-                    </div>
-                  </td>
                 </tr>
               )
             })}

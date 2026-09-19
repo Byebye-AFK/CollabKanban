@@ -1,0 +1,266 @@
+/* ══════════════════════════════════════════════════════════════
+   Library — the grid of cards shared by the Boards and Teams pages.
+
+   Both pages present the same thing: everything of one kind that the
+   user can reach, grouped by workspace or laid flat, with a search, a
+   sort and a grouping switch. The arrangement, the card shell and the
+   loading skeleton live here; each page adds only what is peculiar to
+   its own kind of card (the board's progress ring, the team's member
+   meter) in its own stylesheet.
+
+   Depends on styles/glass.css for the tokens and the panel material.
+   ═════════════════════════════════════════════════════════════ */
+
+/* ══ Toolbar ═════════════════════════════════════════════════ */
+.lib-toolbar { margin-bottom: 18px; }
+
+/* Segmented control — one recessed well, the active half raised out of
+   it, so the pair reads as one switch rather than two buttons. */
+.lib-viewtoggle {
+  display: flex;
+  gap: 3px;
+  padding: 3px;
+  border-radius: 12px;
+  background: rgba(16, 19, 31, 0.05);
+  border: 1px solid var(--glass-line-2);
+}
+.lib-viewbtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  height: 30px;
+  padding: 0 12px;
+  border-radius: 9px;
+  font-size: 13px;
+  font-weight: 550;
+  color: var(--ink-3);
+  white-space: nowrap;
+  transition: background 180ms ease, color 180ms ease, box-shadow 180ms ease;
+}
+.lib-viewbtn:hover { color: var(--ink); }
+.lib-viewbtn.is-on {
+  background: linear-gradient(150deg, #fff, rgba(255, 255, 255, 0.82));
+  color: var(--blue);
+  font-weight: 600;
+  box-shadow: var(--lift-1), inset 0 1px 0 #fff;
+}
+
+/* ══ Grid ════════════════════════════════════════════════════
+   auto-fill rather than a fixed count: the grid reflows on its own
+   at every width, so the page needs no per-breakpoint column rules. */
+.lib-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(232px, 1fr));
+  gap: 14px;
+}
+
+/* ══ Board card ══════════════════════════════════════════════ */
+.lib-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  padding: 16px 17px 14px;
+  min-height: 178px;
+  border-radius: var(--r-md);
+  overflow: hidden;
+  cursor: pointer;
+  transition:
+    transform 260ms cubic-bezier(.2,.8,.3,1),
+    box-shadow 260ms ease,
+    border-color 200ms ease;
+}
+
+/* A wash of the workspace's own colour along the top edge — enough to
+   group a set at a glance without tinting the whole card. */
+.lib-card::before {
+  content: '';
+  position: absolute;
+  inset: 0 0 auto;
+  height: 4px;
+  background: linear-gradient(90deg, var(--tint, var(--blue)), transparent 92%);
+  opacity: 0.9;
+  transition: opacity 220ms ease;
+}
+
+.lib-card:hover,
+.lib-card:focus-visible {
+  transform: translateY(-3px);
+  box-shadow: var(--lift-hover), var(--inner-top);
+  border-color: #fff;
+  outline: none;
+}
+.lib-card:focus-visible { box-shadow: var(--lift-hover), var(--inner-top), 0 0 0 3px rgba(46,107,246,0.35); }
+.lib-card:hover::before { opacity: 1; }
+.lib-card:active { transform: translateY(-1px); }
+
+.lib-card-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.lib-mark {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 38px;
+  height: 38px;
+  border-radius: 12px;
+  color: #fff;
+  font-family: var(--display);
+  font-size: 16px;
+  font-weight: 600;
+  box-shadow: 0 4px 10px rgba(31, 38, 80, 0.16), inset 0 1px 0 rgba(255,255,255,0.4);
+}
+
+.lib-name {
+  margin: 0;
+  font-family: var(--display);
+  font-size: 16.5px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  line-height: 1.25;
+  color: var(--ink);
+  /* Two lines, then ellipsis — a long board name must not push the
+     footer out of alignment with its neighbours. */
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.lib-ws-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  align-self: flex-start;
+  margin-top: 8px;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.lib-ws-chip i { flex: none; width: 6px; height: 6px; border-radius: 50%; }
+
+/* The shared stack overlaps by 8px, which is right for the workspace
+   table's 28px avatars but clips the second initial at the 26px used
+   here. A shallower overlap keeps both letters readable. */
+.lib-card-foot .dsh-stack > * { margin-left: -5px; }
+.lib-card-foot .dsh-stack > *:first-child { margin-left: 0; }
+.lib-card-foot .dsh-more { width: 26px; height: 26px; }
+
+.lib-card-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: auto;
+  padding-top: 14px;
+}
+.lib-meta {
+  font-size: 11.5px;
+  font-weight: 500;
+  color: var(--ink-4);
+  text-align: right;
+  white-space: nowrap;
+}
+.lib-nomembers { font-size: 11.5px; font-weight: 500; color: var(--ink-4); }
+
+/* ══ Workspace groups ════════════════════════════════════════ */
+.lib-groups { display: flex; flex-direction: column; gap: 10px; }
+.lib-group + .lib-group { border-top: 1px solid var(--hairline); padding-top: 10px; }
+
+.lib-group-heading { margin: 0; font-weight: inherit; font-size: inherit; }
+
+.lib-group-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 9px 10px;
+  margin-bottom: 4px;
+  border-radius: 11px;
+  text-align: left;
+  transition: background 160ms ease;
+}
+.lib-group-head:hover { background: rgba(255, 255, 255, 0.6); }
+
+.lib-group-chevron {
+  flex: none;
+  color: var(--ink-4);
+  transition: transform 240ms cubic-bezier(.2,.8,.3,1);
+}
+.lib-group-head.is-open .lib-group-chevron { transform: rotate(90deg); }
+
+.lib-group-dot { flex: none; width: 8px; height: 8px; border-radius: 50%; }
+.lib-group-name {
+  font-family: var(--display);
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: var(--ink);
+}
+.lib-group-count {
+  margin-left: auto;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--ink-4);
+}
+
+/* Collapsing on grid-template-rows lets the panel animate to its own
+   natural height without anyone measuring it first. */
+.lib-group-body {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 320ms cubic-bezier(.2,.8,.3,1);
+}
+.lib-group-body.is-open { grid-template-rows: 1fr; }
+.lib-group-inner { overflow: hidden; }
+/* Padding lives on the inner box so a hover lift is not clipped by it. */
+.lib-group-body.is-open .lib-group-inner { overflow: visible; }
+.lib-group-inner > .lib-grid { padding: 6px 2px 10px; }
+
+/* ══ Skeleton ════════════════════════════════════════════════ */
+.lib-skeleton { cursor: default; pointer-events: none; }
+.lib-skeleton::before { display: none; }
+.lib-sk {
+  display: block;
+  border-radius: 7px;
+  background: linear-gradient(
+    100deg,
+    rgba(16, 19, 31, 0.055) 30%,
+    rgba(16, 19, 31, 0.10) 50%,
+    rgba(16, 19, 31, 0.055) 70%
+  );
+  background-size: 260% 100%;
+  animation: lib-shimmer 1500ms ease-in-out infinite;
+}
+.lib-sk-mark  { width: 38px; height: 38px; border-radius: 12px; }
+.lib-sk-ring  { width: 44px; height: 44px; border-radius: 50%; }
+.lib-sk-line  { width: 72%; height: 15px; margin-bottom: 10px; }
+.lib-sk-chip  { width: 46%; height: 19px; border-radius: 99px; }
+.lib-sk-stack { width: 74px; height: 26px; border-radius: 99px; }
+.lib-sk-meta  { width: 58px; height: 11px; }
+
+@keyframes lib-shimmer {
+  from { background-position: 160% 0; }
+  to   { background-position: -60% 0; }
+}
+
+/* ══ Responsive ══════════════════════════════════════════════ */
+@media (max-width: 560px) {
+  .lib-grid { grid-template-columns: 1fr; }
+  .lib-viewbtn span { display: none; }
+  .lib-viewbtn { padding: 0 10px; }
+}
+
+/* ══ Reduced motion ══════════════════════════════════════════ */
+@media (prefers-reduced-motion: reduce) {
+  .lib-card:hover,
+  .lib-card:focus-visible,
+  .lib-card:active { transform: none; }
+  .lib-sk { animation: none; }
+  .lib-group-body { transition: none; }
+  .lib-group-head.is-open .lib-group-chevron { transition: none; }
+}

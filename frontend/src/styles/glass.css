@@ -1,0 +1,490 @@
+/* ══════════════════════════════════════════════════════════════
+   Glass shell — the shared light glassmorphic surface.
+
+   The .dash token set, the aurora ground, the frosted material and
+   the primitives (panels, menus, chips, avatar stacks, meters,
+   banners, toasts, loading states) that more than one page composes
+   from. The two large pieces of chrome live beside it.
+
+   Page-specific styling stays beside its page — DashboardPage.css
+   for the stat tiles, graph and workspace table; BoardsPage.css for
+   the board grid. Both import this file, so the shell is defined
+   exactly once.
+
+   Every token stays namespaced under .dash so the dark board shell
+   keeps its own theme untouched.
+   ═════════════════════════════════════════════════════════════ */
+@import './rail.css';
+@import './topbar.css';
+
+.dash {
+  --ink:      #10131F;
+  --ink-2:    #3A4155;
+  --ink-3:    #646C82;
+  --ink-4:    #949BAF;
+
+  --blue:      #2E6BF6;
+  --blue-dark: #1A54DC;
+  --blue-soft: #E8F0FE;
+  --violet:    #7C6FF7;
+  --mint:      #14B88A;
+  --amber:     #E9A13B;
+  --rose:      #F0637A;
+
+  /* Frosted surfaces — three depths of the same material */
+  --glass-1:  rgba(255, 255, 255, 0.34);
+  --glass-2:  rgba(255, 255, 255, 0.56);
+  --glass-3:  rgba(255, 255, 255, 0.78);
+  --glass-line:   rgba(255, 255, 255, 0.75);
+  --glass-line-2: rgba(255, 255, 255, 0.45);
+  --hairline: rgba(16, 19, 31, 0.07);
+
+  --blur: saturate(190%) blur(26px);
+
+  /* Glass reads as glass only when light falls off across layers:
+     a tight contact shadow, a wide ambient one, and an inner
+     highlight along the top edge. */
+  --lift-1:
+    0 1px 2px rgba(16, 24, 40, 0.04),
+    0 4px 12px rgba(31, 38, 80, 0.05);
+  --lift-2:
+    0 1px 2px rgba(16, 24, 40, 0.04),
+    0 6px 16px rgba(31, 38, 80, 0.06),
+    0 18px 36px rgba(31, 38, 80, 0.07);
+  --lift-3:
+    0 1px 2px rgba(16, 24, 40, 0.04),
+    0 8px 20px rgba(31, 38, 80, 0.07),
+    0 24px 48px rgba(31, 38, 80, 0.08),
+    0 44px 80px rgba(31, 38, 80, 0.06);
+  --inner-top: inset 0 1px 0 rgba(255, 255, 255, 0.9);
+
+  /* Hover lift for anything inside the scroll port.
+     --lift-3's widest layer blurs 80px, so it reaches ~40px to each
+     side — further than the gutter beside the first and last cards,
+     which left the lift sliced off by a hard straight edge. This one
+     is capped at ~17px of reach so it always lands inside the gutter.
+     --lift-3 is still right for popovers and drawers, which are not
+     clipped by anything. */
+  --lift-hover:
+    0 2px 4px rgba(16, 24, 40, 0.05),
+    0 8px 18px rgba(31, 38, 80, 0.08),
+    0 16px 34px rgba(31, 38, 80, 0.10);
+
+  --topbar-h: 62px;
+
+  --r-sm: 10px;
+  --r-md: 14px;
+  --r-lg: 20px;
+  --r-xl: 26px;
+
+  --font:    'Figtree', 'Inter', system-ui, -apple-system, sans-serif;
+  --display: 'Outfit', 'Figtree', system-ui, sans-serif;
+
+  position: relative;
+  display: flex;
+  height: 100%;
+  /* `clip` rather than `hidden`: a hidden box is still a scroll port that
+     focus or a nested scroll can shift, which used to drag the whole shell
+     — sidebar included — out of place. A clipped box cannot scroll at all. */
+  overflow: hidden;
+  overflow: clip;
+  isolation: isolate;
+  font-family: var(--font);
+  color: var(--ink);
+  background: linear-gradient(155deg, #DFE6FF 0%, #EFE4FA 38%, #FBE7F1 62%, #DCEEFF 100%);
+  -webkit-font-smoothing: antialiased;
+}
+
+.dash *, .dash *::before, .dash *::after { box-sizing: border-box; }
+
+/* Reset is wrapped in :where() so it carries no specificity — a bare
+   `.dash button` rule would otherwise outrank every single-class
+   component style below and strip their backgrounds and borders. */
+:where(.dash) button { font-family: inherit; border: none; background: none; cursor: pointer; }
+:where(.dash) input, :where(.dash) select { font-family: inherit; }
+
+/* ── Aurora ground ──────────────────────────────────────────
+   The colour that glass refracts. Four wide blurred pools drift
+   slowly so the frost never looks like a static screenshot. */
+.dsh-aurora {
+  position: absolute;
+  inset: -10%;
+  z-index: 0;
+  pointer-events: none;
+  filter: blur(64px);
+  opacity: 1;
+}
+.dsh-aurora i {
+  position: absolute;
+  display: block;
+  border-radius: 50%;
+  animation: dsh-drift var(--dur, 26s) ease-in-out infinite alternate;
+  animation-delay: var(--delay, 0s);
+  will-change: transform;
+}
+.dsh-orb-a { top: -4%;  left: 2%;   width: 40vw; height: 40vw; background: radial-gradient(circle, rgba(124,111,247,0.78), rgba(124,111,247,0) 70%); }
+.dsh-orb-b { top: -8%;  right: -2%; width: 38vw; height: 38vw; background: radial-gradient(circle, rgba(46,107,246,0.62),  rgba(46,107,246,0) 70%); }
+.dsh-orb-c { bottom: -6%; left: 20%; width: 46vw; height: 46vw; background: radial-gradient(circle, rgba(244,114,182,0.62), rgba(244,114,182,0) 70%); }
+.dsh-orb-d { bottom: -4%; right: 4%; width: 36vw; height: 36vw; background: radial-gradient(circle, rgba(45,212,191,0.52), rgba(45,212,191,0) 70%); }
+
+@keyframes dsh-drift {
+  from { transform: translate3d(0, 0, 0) scale(1); }
+  to   { transform: translate3d(var(--dx, 5%), var(--dy, -4%), 0) scale(1.12); }
+}
+
+/* ── Glass material ─────────────────────────────────────────── */
+.dsh-glass {
+  position: relative;
+  background: linear-gradient(150deg, var(--glass-2), var(--glass-1));
+  -webkit-backdrop-filter: var(--blur);
+          backdrop-filter: var(--blur);
+  border: 1px solid var(--glass-line);
+  border-radius: var(--r-lg);
+  box-shadow: var(--lift-2), var(--inner-top);
+}
+
+
+/* ══ Main column ═════════════════════════════════════════════ */
+.dsh-main {
+  position: relative;
+  z-index: 10;
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  overflow: clip;
+}
+
+/* ── Scroll area ────────────────────────────────────────────── */
+.dsh-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  /* Keeps a scroll gesture that bottoms out here from chaining to the shell. */
+  overscroll-behavior: contain;
+  /* Top padding clears the floating bar; it never changes, so the scroll
+     geometry stays constant whether the bar is shown or hidden.
+     The side gutters are sized to the hover lift, not to the panels:
+     overflow-y: auto forces overflow-x out of `visible`, so painting is
+     clipped at the padding box and anything narrower than --lift-hover's
+     reach cuts the shadow off flat. (overflow-clip-margin is no help —
+     a scroll container coerces the other axis to `hidden`, where it has
+     no effect.) */
+  padding: calc(var(--topbar-h) + 28px) 20px 26px;
+}
+.dsh-scroll::-webkit-scrollbar { width: 10px; }
+.dsh-scroll::-webkit-scrollbar-thumb {
+  background: rgba(16, 19, 31, 0.14);
+  border: 3px solid transparent;
+  background-clip: content-box;
+  border-radius: 99px;
+}
+.dsh-scroll::-webkit-scrollbar-thumb:hover { background: rgba(16, 19, 31, 0.26); background-clip: content-box; }
+
+/* ── Page heading strip ─────────────────────────────────────── */
+.dsh-crumbbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  padding: 15px 20px;
+  margin-bottom: 16px;
+}
+.dsh-pagetitle {
+  margin: 0;
+  font-family: var(--display);
+  font-size: 21px;
+  font-weight: 600;
+  letter-spacing: -0.03em;
+  color: var(--ink);
+}
+.dsh-crumbs {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  font-size: 13.5px;
+  font-weight: 500;
+  color: var(--ink-3);
+}
+.dsh-crumbs .dsh-crumb-now { color: var(--blue); font-weight: 600; }
+.dsh-crumbs svg { color: var(--ink-4); }
+
+/* ── Section headings ───────────────────────────────────────── */
+.dsh-sec-title {
+  margin: 0;
+  font-family: var(--display);
+  font-size: 17px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: var(--ink);
+}
+.dsh-sec-sub { margin-top: 2px; font-size: 12.5px; color: var(--ink-3); }
+
+/* ══ Meters ══════════════════════════════════════════════════ */
+.dsh-bars { display: flex; gap: 6px; }
+.dsh-bar {
+  flex: 1;
+  height: 6px;
+  border-radius: 99px;
+  background: rgba(16, 19, 31, 0.08);
+  overflow: hidden;
+}
+/* The meter rests at its true width and only *animates* in, so a bar is
+   never wrong if the animation is skipped, blocked or never started. */
+.dsh-bar i {
+  display: block;
+  height: 100%;
+  width: var(--w, 0%);
+  border-radius: 99px;
+  background: var(--c, var(--blue));
+  transform-origin: left center;
+  animation: dsh-grow 950ms cubic-bezier(.2,.75,.3,1) var(--md, 240ms) backwards;
+}
+@keyframes dsh-grow {
+  from { transform: scaleX(0); }
+  to   { transform: scaleX(1); }
+}
+.dsh-bars-label { margin-top: 8px; font-size: 11.5px; font-weight: 500; color: var(--ink-4); }
+
+.dsh-open {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--blue);
+}
+.dsh-open span { transition: transform 200ms cubic-bezier(.2,.8,.3,1); }
+
+/* ══ Panels ══════════════════════════════════════════════════ */
+.dsh-panel { padding: 18px 20px 20px; margin-bottom: 16px; }
+.dsh-panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  flex-wrap: wrap;
+  margin-bottom: 14px;
+}
+.dsh-panel-actions { position: relative; display: flex; align-items: center; gap: 8px; }
+
+.dsh-select {
+  height: 36px;
+  padding: 0 12px;
+  border-radius: 10px;
+  border: 1px solid var(--glass-line-2);
+  background: rgba(255, 255, 255, 0.66);
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 550;
+  outline: none;
+  cursor: pointer;
+  transition: border-color 160ms ease, background 160ms ease;
+}
+.dsh-select:hover { background: rgba(255,255,255,0.92); }
+.dsh-select:focus { border-color: rgba(46,107,246,0.45); box-shadow: 0 0 0 4px rgba(46,107,246,0.12); }
+
+/* ══ Popover menu ════════════════════════════════════════════ */
+.dsh-menu {
+  position: absolute;
+  top: 44px;
+  right: 0;
+  z-index: 40;
+  min-width: 186px;
+  padding: 6px;
+  border-radius: var(--r-md);
+  background: rgba(255, 255, 255, 0.86);
+  -webkit-backdrop-filter: var(--blur);
+          backdrop-filter: var(--blur);
+  border: 1px solid var(--glass-line);
+  box-shadow: var(--lift-3);
+  animation: dsh-pop 140ms cubic-bezier(.2,.8,.3,1);
+}
+.dsh-menu button {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 9px 11px;
+  border-radius: 9px;
+  font-size: 13.5px;
+  font-weight: 500;
+  color: var(--ink-2);
+  text-align: left;
+  transition: background 140ms ease, color 140ms ease;
+}
+.dsh-menu button:hover { background: rgba(46, 107, 246, 0.08); color: var(--ink); }
+.dsh-menu button.is-on { color: var(--blue); font-weight: 600; }
+
+/* ══ Chips, avatar stacks, roles ═════════════════════════════ */
+.dsh-chiprow { display: flex; flex-wrap: wrap; gap: 5px; }
+.dsh-chip {
+  padding: 3px 9px;
+  border-radius: 99px;
+  background: rgba(255, 255, 255, 0.72);
+  border: 1px solid var(--glass-line-2);
+  font-size: 11.5px;
+  font-weight: 550;
+  color: var(--ink-2);
+  white-space: nowrap;
+}
+
+.dsh-stack { display: flex; align-items: center; }
+.dsh-stack > * { margin-left: -8px; border-radius: 50%; box-shadow: 0 0 0 2.5px rgba(255,255,255,0.9); }
+.dsh-stack > *:first-child { margin-left: 0; }
+.dsh-more {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.9);
+  color: var(--ink-3);
+  font-size: 11px;
+  font-weight: 650;
+}
+
+.dsh-role {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 99px;
+  font-size: 11.5px;
+  font-weight: 650;
+  letter-spacing: 0.02em;
+}
+.dsh-role.OWNER  { background: rgba(124, 111, 247, 0.14); color: #5A4BD8; }
+.dsh-role.ADMIN  { background: rgba(46, 107, 246, 0.13);  color: #1A54DC; }
+.dsh-role.MEMBER { background: rgba(16, 19, 31, 0.07);    color: var(--ink-3); }
+
+.dsh-empty { padding: 36px 14px; text-align: center; font-size: 13.5px; color: var(--ink-4); }
+
+/* ══ Banner ══════════════════════════════════════════════════ */
+.dsh-banner {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin-bottom: 16px;
+  padding: 11px 15px;
+  border-radius: var(--r-md);
+  background: rgba(255, 251, 235, 0.72);
+  -webkit-backdrop-filter: var(--blur);
+          backdrop-filter: var(--blur);
+  border: 1px solid rgba(233, 161, 59, 0.32);
+  color: #8A5A12;
+  font-size: 13px;
+  font-weight: 500;
+}
+.dsh-banner code {
+  padding: 1px 6px;
+  border-radius: 5px;
+  background: rgba(233, 161, 59, 0.16);
+  font-size: 12px;
+}
+
+/* ══ Toast ═══════════════════════════════════════════════════ */
+.dsh-toast {
+  position: fixed;
+  left: 50%;
+  bottom: 26px;
+  z-index: 900;
+  transform: translateX(-50%);
+  padding: 11px 18px;
+  border-radius: 99px;
+  background: rgba(16, 19, 31, 0.9);
+  -webkit-backdrop-filter: blur(10px);
+          backdrop-filter: blur(10px);
+  color: #fff;
+  font-size: 13.5px;
+  font-weight: 500;
+  box-shadow: var(--lift-3);
+  animation: dsh-rise 200ms cubic-bezier(.2,.8,.3,1);
+}
+
+/* ══ Loading states ══════════════════════════════════════════ */
+.dsh-center {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  color: var(--ink-3);
+  font-size: 14.5px;
+}
+.dsh-spinner {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  border: 3px solid rgba(46, 107, 246, 0.18);
+  border-top-color: var(--blue);
+  animation: dsh-spin 800ms linear infinite;
+}
+
+
+@keyframes dsh-spin { to { transform: rotate(360deg); } }
+@keyframes dsh-fade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes dsh-pop  { from { opacity: 0; transform: translateY(10px) scale(0.98); } to { opacity: 1; transform: none; } }
+@keyframes dsh-rise { from { opacity: 0; transform: translate(-50%, 12px); } to { opacity: 1; transform: translate(-50%, 0); } }
+
+/* Entrance — panels settle in one after another.
+   Animates the independent `translate` property, not `transform`: the
+   animation's forwards fill would otherwise outrank the hover lift and
+   the cards would stop responding once they had settled. */
+.dsh-in {
+  opacity: 0;
+  animation: dsh-in 620ms cubic-bezier(.16,.84,.34,1) forwards;
+  animation-delay: var(--in, 0ms);
+}
+@keyframes dsh-in {
+  from { opacity: 0; translate: 0 16px; }
+  to   { opacity: 1; translate: none; }
+}
+
+
+/* ══ Responsive ══════════════════════════════════════════════
+   Shell-wide breakpoints. A page adds its own grid rules beside
+   these in its own stylesheet. */
+@media (max-width: 1080px) {
+  .dsh-rail { width: 76px; padding-left: 12px; padding-right: 12px; }
+  .dsh-rail .dsh-navtext, .dsh-rail .dsh-navlabel-text, .dsh-rail .dsh-brand-name { display: none; }
+  .dsh-rail .dsh-navitem { justify-content: center; }
+  .dsh-rail .dsh-brand { justify-content: center; padding-left: 2px; padding-right: 2px; }
+  .dsh-rail .dsh-usercard { justify-content: center; padding: 8px; }
+  .dsh-rail .dsh-user-meta { display: none; }
+  .dsh-rail .dsh-navlabel { height: 1px; padding: 12px 0 0; overflow: hidden; color: transparent; }
+  .dsh-rail .dsh-navwrap:hover .dsh-tip { display: block; }
+  .dsh-collapse { display: none; }
+  .dsh-invite { display: none; }
+}
+@media (max-width: 820px) {
+  .dsh-search { max-width: none; }
+  .dsh-cta-text { display: none; }
+  .dsh-cta { padding: 0 14px; }
+}
+@media (max-width: 560px) {
+  .dsh-rail { display: none; }
+  .dsh-topbar { margin: 8px 8px 0; }
+  .dsh-scroll { padding: calc(var(--topbar-h) + 20px) 14px 20px; }
+  .dsh-crumbs { display: none; }
+}
+
+/* ══ Reduced motion ══════════════════════════════════════════
+   Shell-wide only; a page silences its own motion in its own
+   stylesheet. */
+@media (prefers-reduced-motion: reduce) {
+  .dsh-aurora i { animation: none; }
+  .dsh-in { opacity: 1; animation: none; translate: none; }
+  .dsh-bar i { animation: none; }
+  .dsh-cta::after { display: none; }
+  .dsh-topbar,
+  .dsh-search,
+  .dsh-topbar .dsh-invite,
+  .dsh-topbar .dsh-cta,
+  .dsh-topbar .dsh-avatar-ring { transition: none; }
+  .dsh-search::after { display: none; }
+  .dsh-search:focus-within > svg { transform: none; }
+}

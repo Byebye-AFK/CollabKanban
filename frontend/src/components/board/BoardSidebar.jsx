@@ -51,6 +51,7 @@ export default function BoardSidebar({
   onAddColumn,
   onRefresh,
   onBack,
+  backLabel = 'Back to dashboard',
   onSignOut,
 }) {
   const columns = board?.columns ?? []
@@ -62,7 +63,7 @@ export default function BoardSidebar({
         <span className="brd-brand-name">CollabKanban</span>
       </div>
 
-      <button className="brd-back" onClick={onBack} aria-label="Back to dashboard">
+      <button className="brd-back" onClick={onBack} aria-label={backLabel} title={backLabel}>
         <Icon d={PATH.back} size={16} />
         <span className="brd-navtext">Dashboard</span>
       </button>

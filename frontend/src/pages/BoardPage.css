@@ -1157,3 +1157,122 @@
     transition-duration: 0.01ms !important;
   }
 }
+
+/* ══════════════════════════════════════════════════════════════
+   Peek chrome
+   ─────────────────────────────────────────────────────────────
+   On a board the columns are the work; the rail and the search bar
+   are not. Both retract off-canvas and return when the pointer
+   reaches the edge they left from, so the stage gets the whole
+   viewport and the chrome is still one flick of the mouse away.
+
+   Two rules keep it from becoming a trap:
+     · each panel overlays its own hover zone once shown, so there is
+       no dead gap between reaching for it and landing on it;
+     · nothing is display:none or visibility:hidden, so both panels
+       stay in the tab order and :focus-within brings them back for
+       anyone driving from the keyboard — including ⌘K, which focuses
+       the search and pulls the bar down with it.
+   ═════════════════════════════════════════════════════════════ */
+
+/* The stage no longer has to leave room for either panel. */
+.brd.is-peek .brd-rail {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 60;
+  margin: 12px 0 12px 12px;
+  transform: translateX(calc(-100% - 24px));
+  opacity: 0;
+  transition:
+    transform 340ms var(--ease),
+    opacity 200ms ease,
+    width 280ms var(--ease),
+    padding 280ms var(--ease);
+}
+.brd.is-peek .brd-topbar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 50;
+  transform: translateY(calc(-100% - 16px));
+  opacity: 0;
+  transition:
+    transform 340ms var(--ease),
+    opacity 200ms ease;
+}
+
+/* Reveal — by pointer on the edge, or by focus landing inside. */
+.brd.is-peek .brd-peek-left:hover ~ .brd-rail,
+.brd.is-peek .brd-rail:hover,
+.brd.is-peek .brd-rail:focus-within {
+  transform: none;
+  opacity: 1;
+}
+.brd.is-peek .brd-peek-top:hover ~ .brd-topbar,
+.brd.is-peek .brd-topbar:hover,
+.brd.is-peek .brd-topbar:focus-within {
+  transform: none;
+  opacity: 1;
+}
+
+/* The stage runs full-bleed and simply passes under the chrome. */
+.brd.is-peek .brd-stage { padding-top: 18px; }
+
+/* ── Hover zones ─────────────────────────────────────────────
+   Wide enough to catch a quick flick at the edge without stealing
+   the first column's own pointer events. */
+.brd-peek-zone {
+  position: absolute;
+  z-index: 40;
+  display: grid;
+  place-items: center;
+}
+.brd-peek-left {
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 22px;
+}
+.brd-peek-top {
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 20px;
+}
+
+/* A grip so the retracted chrome is discoverable rather than a secret.
+   It fades out as the panel it belongs to arrives. */
+.brd-peek-grip {
+  border-radius: 99px;
+  background: rgba(16, 19, 31, 0.16);
+  transition: opacity 200ms ease, background 200ms ease;
+}
+.brd-peek-left .brd-peek-grip { width: 4px; height: 54px; }
+.brd-peek-top .brd-peek-grip { width: 54px; height: 4px; }
+.brd-peek-zone:hover .brd-peek-grip { background: rgba(16, 19, 31, 0.3); }
+
+.brd.is-peek .brd-peek-left:hover ~ .brd-rail ~ .brd-main .brd-peek-top .brd-peek-grip,
+.brd.is-peek .brd-rail:hover ~ .brd-main .brd-peek-top .brd-peek-grip,
+.brd.is-peek .brd-rail:focus-within ~ .brd-main .brd-peek-top .brd-peek-grip { opacity: 1; }
+
+/* Each grip hides while its own panel is out. */
+.brd.is-peek .brd-peek-top:hover .brd-peek-grip { opacity: 0; }
+.brd.is-peek .brd-peek-left:hover .brd-peek-grip { opacity: 0; }
+
+/* On a touch screen there is no hover to reveal anything with, so the
+   chrome stays put and the board scrolls under it as before. */
+@media (hover: none) {
+  .brd.is-peek .brd-rail,
+  .brd.is-peek .brd-topbar { position: relative; transform: none; opacity: 1; }
+  .brd.is-peek .brd-rail { top: auto; bottom: auto; left: auto; }
+  .brd.is-peek .brd-topbar { right: auto; }
+  .brd-peek-zone { display: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .brd.is-peek .brd-rail,
+  .brd.is-peek .brd-topbar { transition: opacity 120ms ease; }
+}

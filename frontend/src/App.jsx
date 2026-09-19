@@ -2,9 +2,21 @@ import React, { useEffect, useState } from 'react'
 import BoardPage from './pages/BoardPage'
 import LandingPage from './pages/LandingPage'
 import DashboardPage from './pages/DashboardPage'
+import BoardsPage from './pages/BoardsPage'
+import TeamsPage from './pages/TeamsPage'
 import LoginModal from './components/LoginModal'
 import { getStoredUser, signOut as clearSession, consumeOauthCallback } from './api/authApi'
 import { rememberVisit } from './api/dashboardApi'
+
+/** Where a board's Back control returns you, named for where you came from. */
+const BACK_LABEL = {
+  boards: 'Back to boards',
+  teams: 'Back to teams',
+  dashboard: 'Back to dashboard',
+}
+
+/** Signed-in pages the rail can switch between while no board is open. */
+const PAGES = ['dashboard', 'boards', 'teams']
 
 const css = {
   app: {
@@ -23,6 +35,8 @@ const css = {
 }
 
 export default function App() {
+  // Which signed-in page is showing while no board is open.
+  const [view, setView] = useState('dashboard')
   // null → dashboard (when signed in) or landing page
   const [activeBoardId, setActiveBoardId] = useState(null)
   const [activeBoardName, setActiveBoardName] = useState(null)
@@ -56,6 +70,16 @@ export default function App() {
     setActiveWorkspace(null)
   }
 
+  /**
+   * Rail navigation between the signed-in pages.
+   *
+   * Anything the rail offers that has no page yet is left to the page
+   * itself, which says so rather than silently doing nothing.
+   */
+  const navigate = (id) => {
+    if (PAGES.includes(id)) setView(id)
+  }
+
   const handleLogin = (signedInUser) => {
     setUser(signedInUser)
     setLoginOpen(false)
@@ -64,6 +88,7 @@ export default function App() {
   const signOut = () => {
     clearSession()
     setUser(null)
+    setView('dashboard')
     backToDashboard()
   }
 
@@ -81,8 +106,36 @@ export default function App() {
             workspace={activeWorkspace}
             user={user}
             onBack={backToDashboard}
+            backLabel={BACK_LABEL[view] ?? 'Back to dashboard'}
             onSignOut={signOut}
           />
+        </main>
+      </div>
+    )
+  }
+
+  // ── Boards library ──
+  if (user && view === 'boards') {
+    return (
+      <div style={css.app}>
+        <main style={css.main}>
+          <BoardsPage
+            user={user}
+            onOpenBoard={(id, workspace, boardName) => openBoard(id, workspace, boardName)}
+            onNavigate={navigate}
+            onSignOut={signOut}
+          />
+        </main>
+      </div>
+    )
+  }
+
+  // ── Teams library ──
+  if (user && view === 'teams') {
+    return (
+      <div style={css.app}>
+        <main style={css.main}>
+          <TeamsPage user={user} onNavigate={navigate} onSignOut={signOut} />
         </main>
       </div>
     )
@@ -96,6 +149,7 @@ export default function App() {
           <DashboardPage
             user={user}
             onOpenBoard={(id, workspace) => openBoard(id, workspace)}
+            onNavigate={navigate}
             onSignOut={signOut}
           />
         </main>

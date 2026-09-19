@@ -1,11 +1,11 @@
 import React from 'react'
+import { PALETTE } from '../shell/palette'
 
 /**
  * "Your Space" — the four at-a-glance glass tiles that head the dashboard.
  * Two counters (workspaces / teams) whose footers carry a per-workspace
  * meter, and two "pick up where you left off" tiles.
  */
-const PALETTE = ['#2E6BF6', '#7C6FF7', '#14B88A', '#E9A13B', '#F0637A', '#38BDF8']
 
 const Arrow = ({ dir }) => (
   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -93,12 +93,6 @@ export default function StatCards({ stats, workspaces, onOpenWorkspace, onOpenBo
       trend: 'up',
       trendValue: `${boardCount} boards`,
       meta: 'you are a member of',
-      bars: workspaces.map((w, i) => ({
-        color: PALETTE[i % PALETTE.length],
-        pct: w.progress,
-        title: `${w.name} — ${w.progress}% done`,
-      })),
-      barsLabel: 'cards done per workspace',
     },
     {
       label: 'Teams',
@@ -120,7 +114,7 @@ export default function StatCards({ stats, workspaces, onOpenWorkspace, onOpenBo
       value: lastWorkspace ? lastWorkspace.name : 'None yet',
       small: true,
       meta: lastWorkspace
-        ? `${lastWorkspace.teams.length} teams · ${lastWorkspace.lastActiveLabel}`
+        ? `${lastWorkspace.teams.length} teams`
         : 'open one to get started',
       onClick: lastWorkspace ? () => onOpenWorkspace?.(lastWorkspace) : undefined,
     },

@@ -35,6 +35,7 @@ export default function BoardPage({
   workspace,
   user,
   onBack,
+  backLabel,
   onSignOut,
 }) {
   const {
@@ -94,8 +95,16 @@ export default function BoardPage({
   const title = board?.name || boardName || (boardId ? `Board ${boardId}` : 'Board')
 
   const shell = (children) => (
-    <div className="brd">
+    <div className="brd is-peek">
       <Aurora />
+      {/* Hover targets for the retracted chrome. Each one sits under the
+          panel it reveals, so moving onto the panel keeps it open with no
+          gap to fall through. They are decoration for a pointer only —
+          keyboard users reach the same chrome by tabbing into it, which
+          reveals it through :focus-within. */}
+      <div className="brd-peek-zone brd-peek-left" aria-hidden="true">
+        <span className="brd-peek-grip" />
+      </div>
       <BoardSidebar
         board={board}
         collapsed={collapsed}
@@ -105,9 +114,13 @@ export default function BoardPage({
         onAddColumn={() => setCreateColumnOpen(true)}
         onRefresh={() => loadBoard(boardId)}
         onBack={onBack}
+        backLabel={backLabel}
         onSignOut={onSignOut}
       />
       <div className="brd-main">
+        <div className="brd-peek-zone brd-peek-top" aria-hidden="true">
+          <span className="brd-peek-grip" />
+        </div>
         <BoardTopbar
           boardName={title}
           workspaceName={workspace?.name}

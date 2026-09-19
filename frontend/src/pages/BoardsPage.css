@@ -1,0 +1,34 @@
+/* ══════════════════════════════════════════════════════════════
+   Boards — only what is peculiar to a board card.
+
+   The grid, the card shell, the workspace groups and the skeleton are
+   shared with the Teams page and live in styles/library.css.
+   ═════════════════════════════════════════════════════════════ */
+@import '../styles/glass.css';
+@import '../styles/library.css';
+
+/* ══ Progress ring ═══════════════════════════════════════════ */
+.bds-ring { position: relative; display: grid; place-items: center; flex: none; }
+.bds-ring svg { display: block; transform: rotate(-90deg); }
+.bds-ring-text {
+  position: absolute;
+  font-size: 11.5px;
+  font-weight: 650;
+  color: var(--ink-2);
+  letter-spacing: -0.02em;
+}
+.bds-ring-text i { font-style: normal; font-size: 8.5px; color: var(--ink-4); }
+
+/* The arc rests at its true length; the animation only walks it there
+   from empty, so a skipped animation still shows the right value. */
+.bds-ring-arc {
+  animation: bds-draw 900ms cubic-bezier(.2,.75,.3,1) var(--md, 0ms) backwards;
+}
+@keyframes bds-draw {
+  from { stroke-dashoffset: var(--arc); }
+}
+
+/* ══ Reduced motion ══════════════════════════════════════════ */
+@media (prefers-reduced-motion: reduce) {
+  .bds-ring-arc { animation: none; }
+}

@@ -1,11 +1,14 @@
 // ── Dashboard data ───────────────────────────────────────────
-// The Spring backend currently exposes only /board/{id}, /workspace/create
-// and /member/addmembership — there is no "list my workspaces" endpoint yet.
-// getDashboard() therefore tries the (future) endpoint first and falls back to
-// a locally generated demo snapshot so the UI is fully explorable today.
+// GET /workspace/mine returns every workspace the caller belongs to,
+// each carrying its teams, members and boards. Its DTO shape differs
+// from what the components read, so normalizeWorkspace() below maps it
+// once at the boundary.
 //
-// When GET /workspace/mine lands, it should return the `workspaces` shape below
-// and everything on this page starts rendering live data with no UI changes.
+// When the call fails — server down, no token, empty result — we fall
+// back to a local demo snapshot and flag `live: false`, so the UI stays
+// explorable and says plainly that it is showing sample data.
+
+import { boardProgress } from './boardsApi'
 
 const BASE_URL = 'http://localhost:8080'
 
@@ -52,16 +55,12 @@ export function relativeTime(ts) {
 }
 
 // ── Demo snapshot ────────────────────────────────────────────
-const HOUR = 3600_000
-
 function demoWorkspaces() {
   return [
     {
       workspaceId: 1,
       name: 'Product Core',
       role: 'OWNER',
-      progress: 72,
-      lastActive: Date.now() - 2 * HOUR,
       members: ['Sara Nolan', 'Dan Kite', 'Aria Patel', 'Miles Fox'],
       teams: [
         { id: 't1', name: 'Design', memberCount: 4 },
@@ -79,8 +78,6 @@ function demoWorkspaces() {
       workspaceId: 2,
       name: 'Growth Lab',
       role: 'ADMIN',
-      progress: 45,
-      lastActive: Date.now() - 26 * HOUR,
       members: ['Aria Patel', 'Leo Brand', 'Sara Nolan'],
       teams: [
         { id: 't5', name: 'Content', memberCount: 3 },
@@ -96,8 +93,6 @@ function demoWorkspaces() {
       workspaceId: 3,
       name: 'Platform Ops',
       role: 'MEMBER',
-      progress: 90,
-      lastActive: Date.now() - 5 * HOUR,
       members: ['Miles Fox', 'Dan Kite'],
       teams: [
         { id: 't8', name: 'Infra', memberCount: 4 },
@@ -112,8 +107,6 @@ function demoWorkspaces() {
       workspaceId: 4,
       name: 'Design System',
       role: 'MEMBER',
-      progress: 38,
-      lastActive: Date.now() - 74 * HOUR,
       members: ['Sara Nolan', 'Aria Patel', 'Nina Cole'],
       teams: [
         { id: 't10', name: 'Tokens', memberCount: 2 },
@@ -127,16 +120,75 @@ function demoWorkspaces() {
 function summarise(workspaces, recent) {
   const teamCount = workspaces.reduce((n, w) => n + w.teams.length, 0)
   const boardCount = workspaces.reduce((n, w) => n + w.boards.length, 0)
+  // Derived rather than read off the board: live boards carry columns,
+  // demo boards carry counters, and a board may report neither. Reading
+  // `b.cards - b.done` directly turned the whole tile into NaN the
+  // moment one board lacked them.
   const openCards = workspaces.reduce(
-    (n, w) => n + w.boards.reduce((m, b) => m + (b.cards - b.done), 0),
+    (n, w) =>
+      n +
+      w.boards.reduce((m, b) => {
+        const progress = boardProgress(b)
+        return m + (progress.total - progress.done)
+      }, 0),
     0,
   )
 
   const lastVisitedBoard = recent[0] || null
-  const lastWorkspace =
-    [...workspaces].sort((a, b) => b.lastActive - a.lastActive)[0] || null
+  const lastWorkspace = workspaces[0] || null
 
   return { teamCount, boardCount, openCards, lastWorkspace, lastVisitedBoard }
+}
+
+// ── Normalisation ────────────────────────────────────────────
+// The Spring DTOs and the shape this UI reads have drifted apart:
+// WorkSpaceResponse sends `workSpaceId`, members as objects and teams
+// as `{teamName, count}`. Normalising once, here at the boundary, keeps
+// every component reading one shape and means a future DTO change is a
+// one-file fix rather than a hunt through the render tree.
+//
+// Everything is guarded: an unexpected shape degrades to an empty list
+// rather than throwing halfway through a render.
+
+/** Pulls a display name out of either a UserResponse or a bare string. */
+function memberName(member) {
+  if (typeof member === 'string') return member
+  return member?.userName || member?.name || member?.userEmail || 'Unknown'
+}
+
+function normalizeTeam(team, index) {
+  return {
+    id: team?.id ?? team?.teamId ?? `t${index}-${team?.teamName || team?.name || index}`,
+    name: team?.teamName || team?.name || 'Untitled team',
+    memberCount: team?.count ?? team?.memberCount ?? 0,
+  }
+}
+
+/**
+ * Boards keep whatever card information the payload carried: `columns`
+ * from the live API, or the explicit `cards`/`done` counters the demo
+ * snapshot supplies. boardsApi derives progress from whichever is there.
+ */
+function normalizeBoard(board) {
+  return {
+    boardId: board?.boardId ?? board?.id,
+    name: board?.name || 'Untitled board',
+    ...(Array.isArray(board?.columns) ? { columns: board.columns } : {}),
+    ...(typeof board?.cards === 'number' ? { cards: board.cards } : {}),
+    ...(typeof board?.done === 'number' ? { done: board.done } : {}),
+  }
+}
+
+/** Maps one API workspace onto the shape every component reads. */
+export function normalizeWorkspace(workspace, index = 0) {
+  return {
+    workspaceId: workspace?.workspaceId ?? workspace?.workSpaceId ?? index,
+    name: workspace?.name || 'Untitled workspace',
+    role: workspace?.role || 'MEMBER',
+    members: (workspace?.members || []).map(memberName),
+    teams: (workspace?.teams || []).map(normalizeTeam),
+    boards: (workspace?.boards || []).map(normalizeBoard),
+  }
 }
 
 /**
@@ -147,10 +199,11 @@ export async function getDashboard() {
   let workspaces
   let live = true
   try {
-    workspaces = await request('/workspace/mine')
-    if (!Array.isArray(workspaces) || workspaces.length === 0) throw new Error('empty')
+    const payload = await request('/workspace/mine')
+    if (!Array.isArray(payload) || payload.length === 0) throw new Error('empty')
+    workspaces = payload.map(normalizeWorkspace)
   } catch {
-    workspaces = demoWorkspaces()
+    workspaces = demoWorkspaces().map(normalizeWorkspace)
     live = false
   }
   const recent = getRecent()
