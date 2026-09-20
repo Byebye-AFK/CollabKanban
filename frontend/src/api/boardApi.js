@@ -18,7 +18,11 @@ async function request(path, options = {}) {
 
   if (!res.ok) {
     const text = await res.text().catch(() => 'Unknown error')
-    throw new Error(`API ${res.status}: ${text}`)
+    const err = new Error(`API ${res.status}: ${text}`)
+    // Callers need the code, not just the message: 409 (optimistic lock
+    // conflict) has to be handled differently from a generic failure.
+    err.status = res.status
+    throw err
   }
 
   // 204 No Content → return null

@@ -12,6 +12,8 @@ import org.springframework.security.config.annotation.web.configuration.EnableWe
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.HttpStatusEntryPoint;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.cors.CorsConfiguration;
@@ -41,13 +43,20 @@ public class Security {
 
            security.csrf(csrfConfigurer-> csrfConfigurer.disable());
            security.cors(Customizer.withDefaults());
+
            security.authorizeHttpRequests(authorize-> authorize
-                   .requestMatchers("/user/**","/oauth2/**","/ws/**").permitAll()
+                   .requestMatchers("/user/**","/oauth2/**","/ws/**","/error").permitAll()
                    .anyRequest().authenticated());
 
             security.sessionManagement(session-> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
             security.authenticationProvider(authenticationProvider());
             security.oauth2Login(oauth->oauth.successHandler(oauthHandler));
+            // Without this, any unauthenticated request (including the internal
+            // /error dispatch after a 404) is redirected to the Google OAuth
+            // login page, which a fetch() from the SPA sees as a CORS failure
+            // instead of the real status code. APIs answer with 401.
+            security.exceptionHandling(ex -> ex.authenticationEntryPoint(
+                    new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED)));
             security.addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
             return security.build();
 

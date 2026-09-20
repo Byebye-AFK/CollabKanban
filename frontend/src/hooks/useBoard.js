@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect, useRef } from 'react'
 import {
   getBoard,
   createColumn,
@@ -7,6 +7,10 @@ import {
   deleteCard as apiDeleteCard,
   deleteColumn as apiDeleteColumn,
 } from '../api/boardApi'
+import {
+  subscribeToBoard,
+  subscribeToConnection,
+} from '../api/socket'
 
 /**
  * useBoard
@@ -18,6 +22,18 @@ export function useBoard() {
   const [board, setBoard] = useState(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
+  const [isLive, setIsLive] = useState(false)
+
+  // ── Board WebSocket ───────────────────────────────────────
+  // Receive-only. Writes go over REST; this subscription exists to hear
+  // about changes, whoever made them. Any broadcast on
+  // /topic/board/{boardId} triggers a refetch.
+  const socketUnsubRef = useRef(null)
+  const socketBoardIdRef = useRef(null)
+
+  // Lets the UI say when live updates are off, instead of showing a board
+  // that has quietly stopped updating.
+  useEffect(() => subscribeToConnection(setIsLive), [])
 
   // ── Load ──────────────────────────────────────────────────
   const loadBoard = useCallback(async (boardId) => {
@@ -41,6 +57,33 @@ export function useBoard() {
     }
   }, [])
 
+  // ── Connect Board Socket ─────────────────────────────────
+  // Subscribes to live move broadcasts for a board. Safe to call
+  // repeatedly with the same boardId (no-op after the first).
+  const connectBoardSocket = useCallback((boardId) => {
+    if (!boardId || socketBoardIdRef.current === boardId) return
+
+    socketUnsubRef.current?.()
+    socketBoardIdRef.current = boardId
+
+    // subscribeToBoard returns synchronously, so unmounting mid-handshake
+    // cannot leave a subscription behind.
+    socketUnsubRef.current = subscribeToBoard(boardId, {
+      // A broadcast only says something changed; the refetch is what makes
+      // this client agree with the server.
+      onMessage: () => loadBoard(boardId),
+      // A reconnect means broadcasts were missed outright — the backend's
+      // simple broker cannot replay them.
+      onResync: () => loadBoard(boardId),
+    })
+  }, [loadBoard])
+
+  const disconnectBoardSocket = useCallback(() => {
+    socketUnsubRef.current?.()
+    socketUnsubRef.current = null
+    socketBoardIdRef.current = null
+  }, [])
+
   // ── Add Column ────────────────────────────────────────────
   const addColumn = useCallback(async (boardId, name) => {
     // Optimistic: add a placeholder column immediately
@@ -60,7 +103,7 @@ export function useBoard() {
     }))
 
     try {
-      const created = await createColumn(boardId, name)
+      const created = await createColumn({ boardId, name, position: placeholder.position })
       // Replace placeholder with real column from server
       setBoard(prev => ({
         ...prev,
@@ -133,11 +176,6 @@ const moveCard = useCallback(async (
   targetColumnId,
   targetIndex
 ) => {
-  console.log(
-  "targetIndex:",
-  targetIndex
-)
-
   const snapshot = board
 
 const targetColumn = board.columns.find(
@@ -237,17 +275,26 @@ setBoard(prev => {
 
 try {
 
+  // REST write: it stays behind JwtFilter and returns a status we can act
+  // on. The server broadcasts the saved result, which is what reaches the
+  // other clients — and comes back to us as a refetch we can ignore the
+  // cost of. No refetch here: the optimistic state above already matches.
   await apiMoveCard(
     cardId,
     targetColumnId,
     newPosition
   )
 
-  await loadBoard(board.boardId)
-
 } catch (err) {
 
   setBoard(snapshot)
+
+  // 409: someone moved this card first, so the snapshot is stale too —
+  // only the server knows where the card actually is now.
+  if (err.status === 409) {
+    loadBoard(board.boardId)
+  }
+
   throw err
 
 }
@@ -305,7 +352,10 @@ return {
   board,
   loading,
   error,
+  isLive,
   loadBoard,
+  connectBoardSocket,
+  disconnectBoardSocket,
   addColumn,
   addCard,
   moveCard,

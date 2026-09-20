@@ -30,6 +30,7 @@ export default function BoardTopbar({
   onToggleCollapse,
   onAddColumn,
   matchLabel,
+  isLive = true,
 }) {
   const inputRef = useRef(null)
 
@@ -96,6 +97,18 @@ export default function BoardTopbar({
       </div>
 
       <div className="brd-topbar-right">
+        {/* Only shown when live updates are off. A board that has quietly
+            stopped updating looks identical to a quiet board. */}
+        {!isLive && (
+          <span
+            className="brd-live-off"
+            role="status"
+            title="Reconnecting — other people's changes may not appear yet"
+          >
+            <span className="brd-live-dot" aria-hidden="true" />
+            Offline
+          </span>
+        )}
         {matchLabel && <span className="brd-crumb-ws">{matchLabel}</span>}
         <button className="brd-btn" onClick={onAddColumn}>
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"

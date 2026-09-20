@@ -9,6 +9,7 @@ import com.collabKanban.Kanban.UserSpace.UserRepo;
 import com.collabKanban.Kanban.UserSpace.Users;
 import lombok.NoArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -18,6 +19,9 @@ public class CardService {
     private UserRepo userRepo;
     private  CardRepo cardRepo;
     private ColumRepo columRepo;
+    private SimpMessagingTemplate messagingTemplate;
+    @Autowired
+    public void setMessagingTemplate(SimpMessagingTemplate messagingTemplate){ this.messagingTemplate= messagingTemplate;};
    @Autowired
    public void cardSetter(CardRepo repo){
        cardRepo=repo;
@@ -74,8 +78,8 @@ public class CardService {
        Card card=cardRepo.findByCardId(cardId);
        Colum column=columRepo.getReferenceById(req.getTargetColumnId());
 
-       card.setPosition(req.getPosition());
-       card.setColum(column);
+        card.setPosition(req.getPosition());
+        card.setColum(column);
         res.setTitle(card.getTitle());
         res.setCardId(card.getCardId());
         res.setAssignedTo(card.getAssignedTo().getUserId());
@@ -83,7 +87,7 @@ public class CardService {
 
 
        cardRepo.save(card);
-
+       messagingTemplate.convertAndSend("/topic/board/"+card.getColum().getBoard().getBoardId(),res);
        return res;
     }
 

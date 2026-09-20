@@ -6,19 +6,29 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage"
   },
   "dependencies": {
     "@react-three/drei": "^9.114.3",
     "@react-three/fiber": "^8.17.10",
+    "@stomp/stompjs": "^7.3.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "three": "^0.169.0"
   },
   "devDependencies": {
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.3",
+    "@testing-library/user-event": "^14.6.7",
     "@types/react": "^18.3.1",
     "@types/react-dom": "^18.3.1",
     "@vitejs/plugin-react": "^4.3.1",
-    "vite": "^5.4.2"
+    "@vitest/coverage-v8": "^2.1.9",
+    "jsdom": "^25.0.1",
+    "vite": "^5.4.2",
+    "vitest": "^2.1.9"
   }
 }

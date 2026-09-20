@@ -455,6 +455,21 @@
 }
 
 .brd-topbar-right { display: flex; align-items: center; gap: 9px; flex: none; }
+.brd-live-off {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--ink-4);
+  white-space: nowrap;
+}
+.brd-live-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #e0a34a;
+  box-shadow: 0 0 0 3px rgba(224, 163, 74, 0.16);
+}
 
 /* Primary action */
 .brd-btn {

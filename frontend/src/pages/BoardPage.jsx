@@ -42,7 +42,10 @@ export default function BoardPage({
     board,
     loading,
     error,
+    isLive,
     loadBoard,
+    connectBoardSocket,
+    disconnectBoardSocket,
     addColumn,
     addCard,
     moveCard,
@@ -58,8 +61,12 @@ export default function BoardPage({
   const columnNodes = useRef(new Map())
 
   useEffect(() => {
-    if (boardId) loadBoard(boardId)
-  }, [boardId, loadBoard])
+    if (boardId) {
+      loadBoard(boardId)
+      connectBoardSocket(boardId)
+    }
+    return () => disconnectBoardSocket()
+  }, [boardId, loadBoard, connectBoardSocket, disconnectBoardSocket])
 
   const registerColumn = useCallback((columnId, node) => {
     if (node) columnNodes.current.set(columnId, node)
@@ -130,6 +137,7 @@ export default function BoardPage({
           onToggleCollapse={() => setCollapsed(c => !c)}
           onAddColumn={() => setCreateColumnOpen(true)}
           matchLabel={matchLabel}
+          isLive={isLive}
         />
         {children}
       </div>
