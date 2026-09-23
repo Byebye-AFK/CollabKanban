@@ -74,7 +74,6 @@ public class CardService {
 
     public CardResponse MoveCard(Long cardId, MoveCardReq req){
        CardResponse res=new CardResponse();
-        System.out.println("-------Moving Card-------");
        Card card=cardRepo.findByCardId(cardId);
        Colum column=columRepo.getReferenceById(req.getTargetColumnId());
 
@@ -82,7 +81,7 @@ public class CardService {
         card.setColum(column);
         res.setTitle(card.getTitle());
         res.setCardId(card.getCardId());
-        res.setAssignedTo(card.getAssignedTo().getUserId());
+        res.setAssignedTo(card.getAssignedTo() != null ? card.getAssignedTo().getUserId() : null);
         res.setPosition(card.getPosition());
 
 

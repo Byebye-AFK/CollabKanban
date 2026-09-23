@@ -9,6 +9,7 @@
 // explorable and says plainly that it is showing sample data.
 
 import { boardProgress } from './boardsApi'
+import { parseApiError } from './apiError'
 
 const BASE_URL = 'http://localhost:8080'
 
@@ -20,7 +21,7 @@ async function request(path) {
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
     },
   })
-  if (!res.ok) throw new Error(`API ${res.status}`)
+  if (!res.ok) throw await parseApiError(res)
   return res.json()
 }
 
@@ -202,7 +203,8 @@ export async function getDashboard() {
     const payload = await request('/workspace/mine')
     if (!Array.isArray(payload) || payload.length === 0) throw new Error('empty')
     workspaces = payload.map(normalizeWorkspace)
-  } catch {
+  } catch (err) {
+    console.log(`Dashboard Failing Status Code - ${err.status} , "message" - ${err.message} `)
     workspaces = demoWorkspaces().map(normalizeWorkspace)
     live = false
   }

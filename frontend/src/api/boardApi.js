@@ -1,3 +1,5 @@
+import { parseApiError } from './apiError'
+
 // ── Base URL ─────────────────────────────────────────────────
 // Change this to your Spring Boot server origin in production.
 // In development, Vite proxies /board, /boards, /cards → localhost:8080
@@ -16,14 +18,10 @@ async function request(path, options = {}) {
     ...options,
   })
 
-  if (!res.ok) {
-    const text = await res.text().catch(() => 'Unknown error')
-    const err = new Error(`API ${res.status}: ${text}`)
-    // Callers need the code, not just the message: 409 (optimistic lock
-    // conflict) has to be handled differently from a generic failure.
-    err.status = res.status
-    throw err
-  }
+  // err.status carries the code (callers branch on it — e.g. 409 is an
+  // optimistic-lock conflict, handled differently from a generic failure);
+  // err.message is now the backend's own message, not a generic string.
+  if (!res.ok) throw await parseApiError(res)
 
   // 204 No Content → return null
   if (res.status === 204) return null
@@ -57,7 +55,7 @@ export async function createColumn(columnPayload) {
   })
 }
 export async function deleteColumn(columnId) {
-  console.log("CAlled delete Column")
+  
   return request(`/column/${columnId}`, {
     method: 'DELETE',
   })

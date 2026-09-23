@@ -1,0 +1,212 @@
+/* Login modal — light glass, matching the .dash shell in styles/glass.css.
+   Tokens are re-declared here because .dash scopes them to the app shell,
+   and this modal also opens over the landing page. */
+.lm-overlay {
+  --lm-ink:    #10131F;
+  --lm-ink-2:  #3A4155;
+  --lm-ink-3:  #646C82;
+  --lm-ink-4:  #949BAF;
+  --lm-blue:      #2E6BF6;
+  --lm-blue-dark: #1A54DC;
+  --lm-blue-soft: #E8F0FE;
+  --lm-rose:   #E0485F;
+  --lm-glass-2: rgba(255, 255, 255, 0.56);
+  --lm-glass-3: rgba(255, 255, 255, 0.72);
+  --lm-line:    rgba(255, 255, 255, 0.75);
+  --lm-hairline: rgba(16, 19, 31, 0.09);
+  --lm-blur: saturate(190%) blur(26px);
+
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgba(223, 230, 255, 0.35);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  font-family: 'Figtree', 'Inter', system-ui, -apple-system, sans-serif;
+}
+
+.lm-card {
+  width: 100%;
+  max-width: 380px;
+  padding: 28px 28px 24px;
+  border-radius: 26px;
+  background: var(--lm-glass-3);
+  border: 1px solid var(--lm-line);
+  backdrop-filter: var(--lm-blur);
+  -webkit-backdrop-filter: var(--lm-blur);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.9),
+    0 1px 2px rgba(16, 24, 40, 0.04),
+    0 8px 20px rgba(31, 38, 80, 0.07),
+    0 24px 48px rgba(31, 38, 80, 0.08),
+    0 44px 80px rgba(31, 38, 80, 0.06);
+  color: var(--lm-ink);
+  animation: slideUp 200ms ease;
+}
+
+.lm-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 4px;
+}
+
+.lm-title {
+  font-family: 'Outfit', 'Figtree', system-ui, sans-serif;
+  font-size: 20px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: var(--lm-ink);
+}
+
+.lm-close {
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--lm-ink-3);
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+  transition: background 120ms ease, color 120ms ease;
+}
+.lm-close:hover { background: rgba(16, 19, 31, 0.06); color: var(--lm-ink); }
+
+.lm-subtitle {
+  margin-bottom: 22px;
+  font-size: 13px;
+  color: var(--lm-ink-3);
+}
+
+.lm-google {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin-bottom: 18px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: var(--lm-glass-2);
+  border: 1px solid var(--lm-hairline);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9), 0 1px 2px rgba(16, 24, 40, 0.04);
+  color: var(--lm-ink);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 120ms ease, box-shadow 120ms ease;
+}
+.lm-google:hover {
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: inset 0 1px 0 #fff, 0 4px 12px rgba(31, 38, 80, 0.08);
+}
+
+.lm-divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 18px;
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--lm-ink-4);
+}
+.lm-divider::before,
+.lm-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--lm-hairline);
+}
+
+.lm-fieldset {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin-bottom: 20px;
+}
+
+.lm-field { display: flex; flex-direction: column; gap: 6px; }
+
+.lm-label {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--lm-ink-2);
+}
+
+.lm-input {
+  width: 100%;
+  padding: 9px 12px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.6);
+  border: 1px solid var(--lm-hairline);
+  color: var(--lm-ink);
+  font: inherit;
+  font-size: 14px;
+  line-height: 1.5;
+  outline: none;
+  transition: border-color 120ms ease, box-shadow 120ms ease, background 120ms ease;
+}
+.lm-input::placeholder { color: var(--lm-ink-4); }
+.lm-input:focus {
+  background: rgba(255, 255, 255, 0.92);
+  border-color: rgba(46, 107, 246, 0.55);
+  box-shadow: 0 0 0 3px rgba(46, 107, 246, 0.14);
+}
+
+.lm-error {
+  margin-bottom: 14px;
+  font-size: 12px;
+  color: var(--lm-rose);
+}
+
+.lm-submit {
+  width: 100%;
+  padding: 11px 18px;
+  border: none;
+  border-radius: 12px;
+  background: var(--lm-blue);
+  box-shadow: 0 1px 2px rgba(16, 24, 40, 0.08), 0 6px 16px rgba(46, 107, 246, 0.28);
+  color: #fff;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 120ms ease, box-shadow 120ms ease;
+}
+.lm-submit:hover:not(:disabled) { background: var(--lm-blue-dark); }
+.lm-submit:disabled {
+  background: var(--lm-blue-soft);
+  box-shadow: none;
+  color: var(--lm-ink-4);
+  cursor: not-allowed;
+}
+
+.lm-switch {
+  margin-top: 16px;
+  text-align: center;
+  font-size: 13px;
+  color: var(--lm-ink-3);
+}
+
+.lm-switch-link {
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--lm-blue);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+.lm-switch-link:hover { text-decoration: underline; }
