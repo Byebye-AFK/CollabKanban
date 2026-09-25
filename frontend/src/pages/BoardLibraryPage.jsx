@@ -5,26 +5,40 @@ import { Chevron } from '../components/shell/icons'
 import LibraryToolbar from '../components/library/LibraryToolbar'
 import LibraryGrid from '../components/library/LibraryGrid'
 import LibraryGridSkeleton from '../components/library/LibraryGridSkeleton'
-import TeamCard from '../components/teams/TeamCard'
-import { getDashboard } from '../api/dashboardApi'
-import { flattenTeams, filterTeams, sortTeams, largestTeam, SORTS } from '../api/teamsApi'
+import BoardCard from '../components/boards/BoardCard'
+import { getDashboard, getRecent } from '../api/dashboardApi'
+import { flattenBoards, filterBoards, sortBoards, SORTS } from '../api/boardsApi'
+import { getStarred, toggleStar } from '../api/starredApi'
 import { useRailNavigate } from '../hooks/useRailNavigate'
-import './TeamsPage.css'
+import './BoardsPage.css'
 
 /**
- * TeamsPage — every team the user can reach, on one page.
+ * The page both board libraries are made of — every board (Boards) or
+ * only the starred ones (Starred).
  *
- * Teams arrive inside GET /workspace/mine, so this reuses
- * getDashboard() rather than asking the server separately, and shares
- * the Boards page's grid, toolbar and card shell.
+ * The two differ in their title, their empty state and which boards they
+ * keep, and in nothing else, so they share this and pass the rest in.
+ * Boards arrive inside GET /workspace/mine, so this reuses getDashboard()
+ * rather than asking the server for them separately, and all of the
+ * arranging — flatten, filter, sort, group — is pure and lives in
+ * boardsApi.
  *
- * Read-only by design, not by omission: the workspace payload carries a
- * team's name and member count but no team id and no member list, and
- * POST /team/add/{name} does not attach the new team to a workspace.
- * Until those land there is nothing safe to edit from here, so the page
- * says so rather than offering controls that would silently misfire.
+ * @param {Function} selectBoards  (allBoards, starredIds) => boards to show
  */
-export default function TeamsPage({ user, onNavigate, onSignOut }) {
+export default function BoardLibraryPage({
+  user,
+  onOpenBoard,
+  onNavigate,
+  onSignOut,
+  railId,
+  title,
+  toolbarTitle,
+  flatLabel,
+  searchPlaceholder,
+  searchLabel,
+  emptyMessage,
+  selectBoards = boards => boards,
+}) {
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(true)
   const [failed, setFailed] = useState(false)
@@ -32,6 +46,9 @@ export default function TeamsPage({ user, onNavigate, onSignOut }) {
   const [collapsed, setCollapsed] = useState(false)
   const [view, setView] = useState('grouped')
   const [sort, setSort] = useState('name')
+  // Seeded from storage, then kept here so a star redraws the card it was
+  // pressed on — and drops the board off the page, when this is Starred.
+  const [starredIds, setStarredIds] = useState(getStarred)
 
   const scrollRef = useRef(null)
 
@@ -43,21 +60,27 @@ export default function TeamsPage({ user, onNavigate, onSignOut }) {
     return () => { alive = false }
   }, [])
 
-  const allTeams = useMemo(() => (data ? flattenTeams(data.workspaces) : []), [data])
-
-  const visible = useMemo(
-    () => sortTeams(filterTeams(allTeams, query), sort),
-    [allTeams, query, sort],
+  // Recents are read once per mount: they only change by opening a
+  // board, which navigates away from this page anyway.
+  const allBoards = useMemo(
+    () => (data ? flattenBoards(data.workspaces, getRecent()) : []),
+    [data],
   )
 
-  // Scaled against everything the user has, not just what is on screen,
-  // so the bars do not rescale as you type into the search.
-  const largest = useMemo(() => largestTeam(allTeams), [allTeams])
+  const selected = useMemo(
+    () => selectBoards(allBoards, starredIds),
+    [allBoards, starredIds, selectBoards],
+  )
 
-  const { navigate, toast } = useRailNavigate('teams', onNavigate)
+  const visible = useMemo(
+    () => sortBoards(filterBoards(selected, query), sort),
+    [selected, query, sort],
+  )
+
+  const { navigate, toast } = useRailNavigate(railId, onNavigate)
 
   const rail = {
-    active: 'teams',
+    active: railId,
     collapsed,
     user,
     onNavigate: navigate,
@@ -76,8 +99,8 @@ export default function TeamsPage({ user, onNavigate, onSignOut }) {
           onToggleCollapse={() => setCollapsed(c => !c)}
           query={query}
           onQueryChange={setQuery}
-          searchPlaceholder="Search teams and workspaces…"
-          searchLabel="Search teams"
+          searchPlaceholder={searchPlaceholder}
+          searchLabel={searchLabel}
           user={user}
         >
           <button className="dsh-cta" onClick={() => onNavigate?.('dashboard')}>
@@ -88,17 +111,17 @@ export default function TeamsPage({ user, onNavigate, onSignOut }) {
 
         <div className="dsh-scroll" ref={scrollRef}>
           <div className="dsh-crumbbar dsh-glass dsh-in">
-            <h1 className="dsh-pagetitle">Teams</h1>
+            <h1 className="dsh-pagetitle">{title}</h1>
             <nav className="dsh-crumbs" aria-label="Breadcrumb">
               <span>Home</span><Chevron />
-              <span className="dsh-crumb-now">Teams</span>
+              <span className="dsh-crumb-now">{title}</span>
             </nav>
           </div>
 
           {failed && (
             <div className="dsh-center">
               <span style={{ fontSize: 26 }}>⚠️</span>
-              <span>Couldn't load your teams.</span>
+              <span>Couldn't load your boards.</span>
             </div>
           )}
 
@@ -112,11 +135,11 @@ export default function TeamsPage({ user, onNavigate, onSignOut }) {
           {!failed && (
             <section className="dsh-panel dsh-glass dsh-in" style={{ '--in': '120ms' }}>
               <LibraryToolbar
-                title="All teams"
-                noun="team"
-                flatLabel="All teams"
+                title={toolbarTitle}
+                noun="board"
+                flatLabel={flatLabel}
                 count={visible.length}
-                total={allTeams.length}
+                total={selected.length}
                 sorts={SORTS}
                 sort={sort}
                 onSortChange={setSort}
@@ -126,15 +149,13 @@ export default function TeamsPage({ user, onNavigate, onSignOut }) {
 
               {loading && <LibraryGridSkeleton />}
 
-              {!loading && allTeams.length === 0 && (
-                <div className="dsh-empty">
-                  No teams yet — create one from a workspace to get started.
-                </div>
+              {!loading && selected.length === 0 && (
+                <div className="dsh-empty">{emptyMessage}</div>
               )}
 
-              {!loading && allTeams.length > 0 && visible.length === 0 && (
+              {!loading && selected.length > 0 && visible.length === 0 && (
                 <div className="dsh-empty">
-                  No teams match “{query.trim()}”.
+                  No boards match “{query.trim()}”.
                 </div>
               )}
 
@@ -145,10 +166,17 @@ export default function TeamsPage({ user, onNavigate, onSignOut }) {
                   key={`${view}-${sort}`}
                   items={visible}
                   view={view}
-                  noun="team"
-                  getKey={team => `${team.workspaceId}-${team.id}`}
-                  renderItem={(team, index, key) => (
-                    <TeamCard key={key} team={team} index={index} largest={largest} />
+                  noun="board"
+                  getKey={board => board.boardId}
+                  renderItem={(board, index, key) => (
+                    <BoardCard
+                      key={key}
+                      board={board}
+                      index={index}
+                      onOpen={b => onOpenBoard?.(b.boardId, b.workspace, b.name)}
+                      isStarred={starredIds.includes(board.boardId)}
+                      onToggleStar={b => setStarredIds(toggleStar(b.boardId))}
+                    />
                   )}
                 />
               )}

@@ -3,6 +3,7 @@ import BoardPage from './pages/BoardPage'
 import LandingPage from './pages/LandingPage'
 import DashboardPage from './pages/DashboardPage'
 import BoardsPage from './pages/BoardsPage'
+import StarredPage from './pages/StarredPage'
 import TeamsPage from './pages/TeamsPage'
 import LoginModal from './components/LoginModal'
 import { getStoredUser, signOut as clearSession, consumeOauthCallback } from './api/authApi'
@@ -11,12 +12,20 @@ import { rememberVisit } from './api/dashboardApi'
 /** Where a board's Back control returns you, named for where you came from. */
 const BACK_LABEL = {
   boards: 'Back to boards',
+  starred: 'Back to starred',
   teams: 'Back to teams',
   dashboard: 'Back to dashboard',
 }
 
 /** Signed-in pages the rail can switch between while no board is open. */
-const PAGES = ['dashboard', 'boards', 'teams']
+const PAGES = ['dashboard', 'boards', 'starred', 'teams']
+
+/**
+ * Rail entries that are sections of the dashboard rather than pages of
+ * their own. Clicked from another page they have to open the dashboard
+ * first, which then scrolls to them.
+ */
+const DASHBOARD_SECTIONS = ['graph', 'workspaces']
 
 const css = {
   app: {
@@ -43,6 +52,9 @@ export default function App() {
   const [activeWorkspace, setActiveWorkspace] = useState(null)
   const [loginOpen, setLoginOpen] = useState(false)
   const [user, setUser] = useState(null)
+  // Set when the rail asked for a dashboard section from another page;
+  // the dashboard scrolls there once, then clears it.
+  const [pendingSection, setPendingSection] = useState(null)
 
   useEffect(() => {
     const oauthUser = consumeOauthCallback()
@@ -73,11 +85,21 @@ export default function App() {
   /**
    * Rail navigation between the signed-in pages.
    *
-   * Anything the rail offers that has no page yet is left to the page
-   * itself, which says so rather than silently doing nothing.
+   * A dashboard section asked for from elsewhere opens the dashboard and
+   * is handed on for it to scroll to. Anything the rail offers that has
+   * no page yet is left to the page itself, which says so rather than
+   * silently doing nothing.
    */
   const navigate = (id) => {
-    if (PAGES.includes(id)) setView(id)
+    if (PAGES.includes(id)) {
+      setPendingSection(null)
+      setView(id)
+      return
+    }
+    if (DASHBOARD_SECTIONS.includes(id)) {
+      setPendingSection(id)
+      setView('dashboard')
+    }
   }
 
   const handleLogin = (signedInUser) => {
@@ -130,6 +152,22 @@ export default function App() {
     )
   }
 
+  // ── Starred boards ──
+  if (user && view === 'starred') {
+    return (
+      <div style={css.app}>
+        <main style={css.main}>
+          <StarredPage
+            user={user}
+            onOpenBoard={(id, workspace, boardName) => openBoard(id, workspace, boardName)}
+            onNavigate={navigate}
+            onSignOut={signOut}
+          />
+        </main>
+      </div>
+    )
+  }
+
   // ── Teams library ──
   if (user && view === 'teams') {
     return (
@@ -151,6 +189,8 @@ export default function App() {
             onOpenBoard={(id, workspace) => openBoard(id, workspace)}
             onNavigate={navigate}
             onSignOut={signOut}
+            initialSection={pendingSection}
+            onSectionShown={() => setPendingSection(null)}
           />
         </main>
       </div>

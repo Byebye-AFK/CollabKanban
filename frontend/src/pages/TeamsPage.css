@@ -7,29 +7,41 @@
 @import '../styles/glass.css';
 @import '../styles/library.css';
 
-/* Member count, in the slot a board card gives its progress ring. */
+/* Member count, in the slot a board card gives its progress ring.
+
+   Deliberately quiet: stacked on its own raised tile it read as the
+   headline of the card, competing with the team's name. The meter below
+   already carries the comparison, so this is only the exact figure —
+   plain inline text, surfaced when the card is hovered. */
 .tms-count {
-  display: grid;
-  place-items: center;
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
   flex: none;
-  min-width: 44px;
-  padding: 6px 10px;
-  border-radius: 12px;
-  background: linear-gradient(150deg, rgba(255,255,255,0.95), rgba(255,255,255,0.6));
-  box-shadow: var(--lift-1), inset 0 1px 0 #fff;
-  font-family: var(--display);
-  font-size: 17px;
-  font-weight: 600;
+  font-size: 12px;
+  font-weight: 500;
   line-height: 1.05;
-  letter-spacing: -0.02em;
-  color: var(--ink);
+  color: var(--ink-4);
+  opacity: 0;
+  transition: opacity 160ms ease;
 }
+.tms-card:hover .tms-count { opacity: 1; }
+
 .tms-count i {
   font-style: normal;
-  font-size: 9.5px;
-  font-weight: 550;
-  letter-spacing: 0.01em;
+  font-size: 12px;
+  font-weight: 500;
   color: var(--ink-4);
+}
+
+/* Nothing to hover with: on touch the count would never appear at all,
+   so there it simply stays visible. */
+@media (hover: none) {
+  .tms-count { opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tms-count { transition: none; }
 }
 
 /* The team card has no member stack, so its footer is a meter and a

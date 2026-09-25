@@ -24,7 +24,7 @@ const SECTION_LABEL = {
 }
 
 /** Rail destinations that are their own page rather than a section here. */
-const OTHER_PAGES = ['boards', 'teams']
+const OTHER_PAGES = ['boards', 'starred', 'teams']
 
 /** Breathing room left above a section once it is scrolled to. */
 const SECTION_SCROLL_GAP = 12
@@ -53,7 +53,14 @@ const InviteIcon = () => (
   </svg>
 )
 
-export default function DashboardPage({ user, onOpenBoard, onNavigate, onSignOut }) {
+export default function DashboardPage({
+  user,
+  onOpenBoard,
+  onNavigate,
+  onSignOut,
+  initialSection = null,
+  onSectionShown,
+}) {
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(true)
   const [query, setQuery] = useState('')
@@ -127,6 +134,20 @@ export default function DashboardPage({ user, onOpenBoard, onNavigate, onSignOut
     const top = Math.max(container.scrollTop + offset - SECTION_SCROLL_GAP, 0)
     container.scrollTo({ top, behavior: 'smooth' })
   }
+
+  /**
+   * A section the rail asked for from another page.
+   *
+   * It can only be scrolled to once the loaded markup is mounted, so this
+   * waits for the data, then tells App it has been honoured — otherwise
+   * every later visit to the dashboard would jump to the same section.
+   */
+  useEffect(() => {
+    if (!initialSection || loading || !data) return
+    const targets = { graph: graphRef, workspaces: listRef }
+    scrollToSection(targets[initialSection]?.current ?? null)
+    onSectionShown?.()
+  }, [initialSection, loading, data])
 
   const navigate = (id) => {
     // No setNav here — scrolling drives the highlight, so the rail and the

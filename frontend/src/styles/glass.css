@@ -31,7 +31,11 @@
   --amber:     #E9A13B;
   --rose:      #F0637A;
 
-  /* Frosted surfaces — three depths of the same material */
+  /* Frosted surfaces — four depths of the same material.
+     --glass-0 is the nested tier: for glass that sits inside other
+     glass, where the parent has already whitened what shows through and
+     a second full-strength pane would composite to near-solid. */
+  --glass-0:  rgba(255, 255, 255, 0.06);
   --glass-1:  rgba(255, 255, 255, 0.34);
   --glass-2:  rgba(255, 255, 255, 0.56);
   --glass-3:  rgba(255, 255, 255, 0.78);
@@ -262,6 +266,17 @@
 
 /* ══ Panels ══════════════════════════════════════════════════ */
 .dsh-panel { padding: 18px 20px 20px; margin-bottom: 16px; }
+
+/* A panel is the widest pane on the page, so at full strength it bleached
+   the aurora out of everything standing on it — the cards inside were
+   frosting an already-white sheet and had no colour left to pick up.
+   Lighter here is what lets the ground reach them. The rail, top bar and
+   crumb bar keep the full material: they carry the chrome and have to
+   stay legible over whatever drifts beneath. */
+.dsh-panel.dsh-glass {
+  background: linear-gradient(150deg, rgba(255, 255, 255, 0.38), rgba(255, 255, 255, 0.20));
+  border-color: var(--glass-line-2);
+}
 .dsh-panel-head {
   display: flex;
   align-items: center;

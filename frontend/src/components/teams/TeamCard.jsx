@@ -9,10 +9,6 @@ import { colorFor } from '../shell/palette'
  * a meter scaled against the largest team on the page, so the bars
  * compare teams to each other rather than to an invented ceiling.
  */
-function initial(name = '') {
-  return name.trim().slice(0, 1).toUpperCase() || '?'
-}
-
 function memberLabel(count) {
   if (count === 0) return 'No members yet'
   return `${count} member${count === 1 ? '' : 's'}`
@@ -31,9 +27,6 @@ export default function TeamCard({ team, index = 0, largest = 1 }) {
       aria-label={`${name} in ${workspaceName}, ${memberLabel(memberCount)}`}
     >
       <div className="lib-card-head">
-        <span className="lib-mark" style={{ background: `linear-gradient(145deg, ${color}, ${color}A6)` }}>
-          {initial(name)}
-        </span>
         <span className="tms-count">
           {memberCount}
           <i>{memberCount === 1 ? 'member' : 'members'}</i>

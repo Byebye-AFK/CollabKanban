@@ -110,4 +110,55 @@ describe('BoardCard', () => {
 
     expect(screen.getByRole('heading', { name: 'Sprint 24' })).toBeInTheDocument()
   })
+
+  describe('star', () => {
+    test('shows no star when the card cannot be starred', () => {
+      render(<BoardCard board={board()} />)
+
+      expect(screen.queryByRole('button', { name: /Star Sprint 24/ })).not.toBeInTheDocument()
+    })
+
+    test('offers to star a board that is not starred', () => {
+      render(<BoardCard board={board()} onToggleStar={vi.fn()} />)
+
+      expect(screen.getByRole('button', { name: 'Star Sprint 24' })).toHaveAttribute('aria-pressed', 'false')
+    })
+
+    test('offers to unstar a board that is starred', () => {
+      render(<BoardCard board={board()} isStarred onToggleStar={vi.fn()} />)
+
+      expect(screen.getByRole('button', { name: 'Unstar Sprint 24' })).toHaveAttribute('aria-pressed', 'true')
+    })
+
+    test('hands the board back when the star is pressed', async () => {
+      const onToggleStar = vi.fn()
+      const b = board()
+      render(<BoardCard board={b} onToggleStar={onToggleStar} />)
+
+      await userEvent.click(screen.getByRole('button', { name: 'Star Sprint 24' }))
+
+      expect(onToggleStar).toHaveBeenCalledWith(b)
+    })
+
+    test('starring does not also open the board', async () => {
+      const onOpen = vi.fn()
+      render(<BoardCard board={board()} onOpen={onOpen} onToggleStar={vi.fn()} />)
+
+      await userEvent.click(screen.getByRole('button', { name: 'Star Sprint 24' }))
+
+      expect(onOpen).not.toHaveBeenCalled()
+    })
+
+    test('starring by keyboard does not also open the board', async () => {
+      const onOpen = vi.fn()
+      const onToggleStar = vi.fn()
+      render(<BoardCard board={board()} onOpen={onOpen} onToggleStar={onToggleStar} />)
+
+      screen.getByRole('button', { name: 'Star Sprint 24' }).focus()
+      await userEvent.keyboard('{Enter}')
+
+      expect(onToggleStar).toHaveBeenCalledTimes(1)
+      expect(onOpen).not.toHaveBeenCalled()
+    })
+  })
 })

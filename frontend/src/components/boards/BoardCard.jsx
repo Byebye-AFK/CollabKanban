@@ -1,6 +1,7 @@
 import React from 'react'
 import Avatar from '../Avatar'
 import ProgressRing from './ProgressRing'
+import { StarIcon } from '../shell/icons'
 import { colorFor } from '../shell/palette'
 import { progressPercent } from '../../api/boardsApi'
 import { relativeTime } from '../../api/dashboardApi'
@@ -19,10 +20,6 @@ const MAX_AVATARS = 3
 /** Per-card stagger applied to the ring draw-in, on top of the card's own. */
 const RING_DELAY_MS = 260
 
-function initial(name = '') {
-  return name.trim().slice(0, 1).toUpperCase() || '?'
-}
-
 /**
  * What the card says about its cards.
  *
@@ -39,13 +36,16 @@ function progressLabel(progress) {
   return `${progress.done}/${progress.total} done`
 }
 
-export default function BoardCard({ board, index = 0, onOpen }) {
+export default function BoardCard({ board, index = 0, onOpen, isStarred = false, onToggleStar }) {
   const { name, workspaceName, members, progress, lastVisitedAt } = board
 
   const color = colorFor(workspaceName)
   const percent = progressPercent(progress)
   const shown = members.slice(0, MAX_AVATARS)
   const extra = members.length - shown.length
+
+  const hasRing = progress.known && progress.total > 0
+  const canStar = typeof onToggleStar === 'function'
 
   const open = () => onOpen?.(board)
 
@@ -61,14 +61,29 @@ export default function BoardCard({ board, index = 0, onOpen }) {
       }}
       aria-label={`Open ${name} in ${workspaceName}`}
     >
-      <div className="lib-card-head">
-        <span className="lib-mark" style={{ background: `linear-gradient(145deg, ${color}, ${color}A6)` }}>
-          {initial(name)}
-        </span>
-        {progress.known && progress.total > 0 && (
-          <ProgressRing percent={percent} color={color} delay={RING_DELAY_MS + index * 55} />
-        )}
-      </div>
+      {/* Only rendered when it has something to hold, so a board with
+          neither star nor cards carries no empty row above its name. */}
+      {(canStar || hasRing) && (
+        <div className="lib-card-head">
+          {canStar && (
+            <button
+              className={`lib-star${isStarred ? ' is-on' : ''}`}
+              // The card itself opens the board, so the star has to keep
+              // both its click and its Enter/Space to itself.
+              onClick={e => { e.stopPropagation(); onToggleStar(board) }}
+              onKeyDown={e => e.stopPropagation()}
+              aria-pressed={isStarred}
+              aria-label={isStarred ? `Unstar ${name}` : `Star ${name}`}
+              title={isStarred ? 'Remove from Starred' : 'Add to Starred'}
+            >
+              <StarIcon filled={isStarred} />
+            </button>
+          )}
+          {hasRing && (
+            <ProgressRing percent={percent} color={color} delay={RING_DELAY_MS + index * 55} />
+          )}
+        </div>
+      )}
 
       <h4 className="lib-name" title={name}>{name}</h4>
       <span className="dsh-chip lib-ws-chip">

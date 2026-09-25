@@ -60,6 +60,20 @@ export const GroupIcon = props => (
   <Icon paths={['M3 5h18', 'M3 12h18', 'M3 19h10']} stroke={1.8} {...props} />
 )
 
+/**
+ * The one icon that carries state: hollow when the board is not starred,
+ * solid when it is, so the toggle reads at a glance without its label.
+ */
+export const StarIcon = ({ filled = false, ...props }) => (
+  <Icon
+    paths={['M12 3.5l2.6 5.4 5.9.8-4.3 4.2 1 5.9-5.2-2.8-5.2 2.8 1-5.9L3.5 9.7l5.9-.8z']}
+    size={17}
+    stroke={1.8}
+    fill={filled ? 'currentColor' : 'none'}
+    {...props}
+  />
+)
+
 export const GridIcon = props => (
   <Icon paths={['M4 4h7v7H4z', 'M13 4h7v7h-7z', 'M4 13h7v7H4z', 'M13 13h7v7h-7z']} stroke={1.8} {...props} />
 )

@@ -1,6 +1,5 @@
 import React, { useMemo, useState } from 'react'
 import Avatar from '../Avatar'
-import { PALETTE as COLORS } from '../shell/palette'
 
 /**
  * WorkspaceList — every workspace the user belongs to, with its teams,
@@ -85,26 +84,14 @@ export default function WorkspaceList({ workspaces, onOpenWorkspace, onCreateWor
             {rows.length === 0 && (
               <tr><td className="dsh-empty" colSpan={5}>You aren't in any workspace yet.</td></tr>
             )}
-            {rows.map((ws, i) => {
-              const color = COLORS[i % COLORS.length]
+            {rows.map((ws) => {
               const shown = ws.members.slice(0, 3)
               const extra = ws.members.length - shown.length
               return (
                 <tr key={ws.workspaceId} onClick={() => onOpenWorkspace?.(ws)}>
                   <td>
                     <div className="dsh-ws-cell">
-                      <span
-                        className="dsh-ws-mark"
-                        style={{ background: `linear-gradient(145deg, ${color}, ${color}A6)` }}
-                      >
-                        {ws.name.slice(0, 1)}
-                      </span>
-                      <span>
-                        <span className="dsh-ws-name">{ws.name}</span>
-                        <span className="dsh-ws-id">
-                          ID {String(ws.workspaceId).padStart(6, '0')}
-                        </span>
-                      </span>
+                      <span className="dsh-ws-name">{ws.name}</span>
                     </div>
                   </td>
                   <td>
