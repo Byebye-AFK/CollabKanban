@@ -59,14 +59,8 @@ public class WorkspaceService {
                     List<BoardResponse> boards=workspace.getBoards().stream().map((Board board)->{return boardService.findBoards(board.getBoardId());}).toList();
                     workSpaceResponse.setBoards(boards);
 
-                    List<UserResponse> users= workspaceMemberRepo.findMembersnWorkspaceExceptUser(workspace,user).stream().map( (Users users1)->{
-                                      UserResponse response =new UserResponse();
-
-                                      response.setUserName( users1.getName() );
-                                      response.setUserEmail( users1.getEmail() );
-
-                                      return  response;
-                            } )
+                    List<UserResponse> users= workspaceMemberRepo.findMembersnWorkspaceExceptUser(workspace,user).stream()
+                            .map(this::toUserResponse)
                             .toList();
                     workSpaceResponse.setMembers(users);
 
@@ -75,7 +69,10 @@ public class WorkspaceService {
                                            TeamResponse response=new TeamResponse();
                                            response.setTeamName(team.getName());
                                            response.setCount(team.getCount());
-
+                                           response.setTeamId(team.getTeamId());
+                                           response.setMembers(team.getTeamMembers().stream()
+                                                   .map(teamMember->toUserResponse(teamMember.getMembers()))
+                                                   .toList());
                                             return response;     })
                                            .toList();
 
@@ -83,6 +80,7 @@ public class WorkspaceService {
 
                    workSpaceResponse.setRole(workspaceMemberRepo.getRoleOfMember(user,workspace));
                    workSpaceResponse.setName(workspace.getName());
+                   workSpaceResponse.setWorkSpaceId(workspace.getWorkspaceId());
 
 
 
@@ -96,5 +94,13 @@ public class WorkspaceService {
 
     }
 
+
+    private UserResponse toUserResponse(Users member){
+        UserResponse response=new UserResponse();
+        response.setUserId(member.getUserId());
+        response.setUserName(member.getName());
+        response.setUserEmail(member.getEmail());
+        return response;
+    }
 
 }

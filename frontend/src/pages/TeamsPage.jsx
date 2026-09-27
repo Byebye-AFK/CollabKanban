@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react'
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import GlassShell from '../components/shell/GlassShell'
 import GlassTopbar from '../components/shell/GlassTopbar'
 import { Chevron } from '../components/shell/icons'
@@ -6,8 +6,20 @@ import LibraryToolbar from '../components/library/LibraryToolbar'
 import LibraryGrid from '../components/library/LibraryGrid'
 import LibraryGridSkeleton from '../components/library/LibraryGridSkeleton'
 import TeamCard from '../components/teams/TeamCard'
+import AddTeamMembersModal from '../components/teams/AddTeamMembersModal'
+import CreateTeamModal from '../components/teams/CreateTeamModal'
 import { getDashboard } from '../api/dashboardApi'
-import { flattenTeams, filterTeams, sortTeams, largestTeam, SORTS } from '../api/teamsApi'
+import {
+  flattenTeams,
+  filterTeams,
+  sortTeams,
+  largestTeam,
+  canManageTeam,
+  addTeamMembers,
+  teamHomes,
+  createTeam,
+  SORTS,
+} from '../api/teamsApi'
 import { useRailNavigate } from '../hooks/useRailNavigate'
 import './TeamsPage.css'
 
@@ -18,12 +30,16 @@ import './TeamsPage.css'
  * getDashboard() rather than asking the server separately, and shares
  * the Boards page's grid, toolbar and card shell.
  *
- * Read-only by design, not by omission: the workspace payload carries a
- * team's name and member count but no team id and no member list, and
- * POST /team/add/{name} does not attach the new team to a workspace.
- * Until those land there is nothing safe to edit from here, so the page
- * says so rather than offering controls that would silently misfire.
+ * Owners and admins can create teams in their workspaces and add people
+ * from a team's workspace to the team. Both are withheld on sample
+ * data, where there is nothing to save to.
  */
+const NOTICE_MS = 2600
+
+function addedNotice(count, teamName) {
+  return `Added ${count} member${count === 1 ? '' : 's'} to ${teamName}`
+}
+
 export default function TeamsPage({ user, onNavigate, onSignOut }) {
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -32,16 +48,49 @@ export default function TeamsPage({ user, onNavigate, onSignOut }) {
   const [collapsed, setCollapsed] = useState(false)
   const [view, setView] = useState('grouped')
   const [sort, setSort] = useState('name')
+  const [addingTo, setAddingTo] = useState(null)
+  const [isCreating, setIsCreating] = useState(false)
+  const [notice, setNotice] = useState(null)
 
   const scrollRef = useRef(null)
+  const aliveRef = useRef(true)
+
+  const load = useCallback(() => (
+    getDashboard()
+      .then(d => { if (aliveRef.current) { setData(d); setLoading(false) } })
+      .catch(() => { if (aliveRef.current) { setFailed(true); setLoading(false) } })
+  ), [])
 
   useEffect(() => {
-    let alive = true
-    getDashboard()
-      .then(d => { if (alive) { setData(d); setLoading(false) } })
-      .catch(() => { if (alive) { setFailed(true); setLoading(false) } })
-    return () => { alive = false }
-  }, [])
+    aliveRef.current = true
+    load()
+    return () => { aliveRef.current = false }
+  }, [load])
+
+  useEffect(() => {
+    if (!notice) return
+    const t = setTimeout(() => setNotice(null), NOTICE_MS)
+    return () => clearTimeout(t)
+  }, [notice])
+
+  const handleAddMembers = async (userIds) => {
+    const team = addingTo
+    const result = await addTeamMembers(team.id, userIds)
+    if (result.added.length > 0) {
+      setNotice(addedNotice(result.added.length, team.name))
+      load()
+    }
+    return result
+  }
+
+  const homes = useMemo(() => (data?.live ? teamHomes(data.workspaces) : []), [data])
+
+  const handleCreateTeam = async ({ name, workspaceId }) => {
+    await createTeam({ name, workspaceId })
+    const home = homes.find(w => w.workspaceId === workspaceId)
+    setNotice(`Created ${name} in ${home?.name ?? 'the workspace'}`)
+    load()
+  }
 
   const allTeams = useMemo(() => (data ? flattenTeams(data.workspaces) : []), [data])
 
@@ -122,13 +171,21 @@ export default function TeamsPage({ user, onNavigate, onSignOut }) {
                 onSortChange={setSort}
                 view={view}
                 onViewChange={setView}
-              />
+              >
+                {homes.length > 0 && (
+                  <button className="tms-add" onClick={() => setIsCreating(true)}>
+                    New team
+                  </button>
+                )}
+              </LibraryToolbar>
 
               {loading && <LibraryGridSkeleton />}
 
               {!loading && allTeams.length === 0 && (
                 <div className="dsh-empty">
-                  No teams yet — create one from a workspace to get started.
+                  {homes.length > 0
+                    ? 'No teams yet. Use New team to create one.'
+                    : 'No teams yet. A workspace owner or admin can create one.'}
                 </div>
               )}
 
@@ -148,7 +205,13 @@ export default function TeamsPage({ user, onNavigate, onSignOut }) {
                   noun="team"
                   getKey={team => `${team.workspaceId}-${team.id}`}
                   renderItem={(team, index, key) => (
-                    <TeamCard key={key} team={team} index={index} largest={largest} />
+                    <TeamCard
+                      key={key}
+                      team={team}
+                      index={index}
+                      largest={largest}
+                      onAddMembers={data.live && canManageTeam(team.role) ? setAddingTo : undefined}
+                    />
                   )}
                 />
               )}
@@ -156,7 +219,23 @@ export default function TeamsPage({ user, onNavigate, onSignOut }) {
           )}
         </div>
 
-        {toast && <div className="dsh-toast">{toast}</div>}
+        {addingTo && (
+          <AddTeamMembersModal
+            team={addingTo}
+            onSubmit={handleAddMembers}
+            onClose={() => setAddingTo(null)}
+          />
+        )}
+
+        {isCreating && (
+          <CreateTeamModal
+            workspaces={homes}
+            onSubmit={handleCreateTeam}
+            onClose={() => setIsCreating(false)}
+          />
+        )}
+
+        {(notice || toast) && <div className="dsh-toast" role="status">{notice || toast}</div>}
       </div>
     </GlassShell>
   )

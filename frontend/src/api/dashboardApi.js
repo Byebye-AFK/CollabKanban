@@ -157,11 +157,25 @@ function memberName(member) {
   return member?.userName || member?.name || member?.userEmail || 'Unknown'
 }
 
+/**
+ * A member with the id the team endpoints need. A bare string (the demo
+ * snapshot) has no id, so it gets null and can never be submitted.
+ */
+function toPerson(member) {
+  if (typeof member === 'string') return { userId: null, name: member, email: null }
+  return {
+    userId: member?.userId ?? null,
+    name: memberName(member),
+    email: member?.userEmail ?? null,
+  }
+}
+
 function normalizeTeam(team, index) {
   return {
     id: team?.id ?? team?.teamId ?? `t${index}-${team?.teamName || team?.name || index}`,
     name: team?.teamName || team?.name || 'Untitled team',
     memberCount: team?.count ?? team?.memberCount ?? 0,
+    members: (team?.members || []).map(toPerson),
   }
 }
 
@@ -187,6 +201,7 @@ export function normalizeWorkspace(workspace, index = 0) {
     name: workspace?.name || 'Untitled workspace',
     role: workspace?.role || 'MEMBER',
     members: (workspace?.members || []).map(memberName),
+    people: (workspace?.members || []).map(toPerson),
     teams: (workspace?.teams || []).map(normalizeTeam),
     boards: (workspace?.boards || []).map(normalizeBoard),
   }

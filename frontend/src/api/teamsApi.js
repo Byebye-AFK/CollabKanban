@@ -1,16 +1,22 @@
-// ── Team derivation ──────────────────────────────────────────
+// ── Teams ────────────────────────────────────────────────────
 // Teams arrive inside GET /workspace/mine alongside boards, so the
 // Teams page reuses getDashboard() rather than asking the server
 // separately. Searching, sorting and grouping are shared with the
 // Boards page and live in ./library.
 //
-// What the API gives us per team is a name and a member count
-// (TeamResponse is `{teamName, count}`), normalised upstream to
-// `{id, name, memberCount}`. There is no team member list and no team
-// id in that payload, so this page reports teams rather than editing
-// them — see the notes in TeamsPage.
+// Per team the payload carries an id, a name, a member count and the
+// members themselves; per workspace, the people who belong to it
+// (normalised upstream to `{userId, name, email}`). Together those are
+// enough to offer "add from this workspace" — POST /team/addMember
+// takes one `{teamId, userId}` at a time.
 
 import { filterBy, sortBy } from './library'
+import { parseApiError } from './apiError'
+
+const BASE_URL = 'http://localhost:8080'
+
+/** Roles the server lets change a team's membership. */
+const TEAM_MANAGER_ROLES = ['OWNER', 'ADMIN']
 
 /**
  * Flattens every workspace's teams into one list, each team carrying
@@ -25,9 +31,11 @@ export function flattenTeams(workspaces = []) {
       id: team.id,
       name: team.name,
       memberCount: team.memberCount ?? 0,
+      members: team.members || [],
       workspace,
       workspaceId: workspace.workspaceId,
       workspaceName: workspace.name,
+      workspacePeople: workspace.people || [],
       role: workspace.role,
     })),
   )
@@ -63,4 +71,87 @@ export function sortTeams(teams = [], sortId = 'name') {
 /** Case-insensitive match across team name and workspace name. */
 export function filterTeams(teams = [], query = '') {
   return filterBy(teams, query, ['name', 'workspaceName'])
+}
+
+// ── Membership ───────────────────────────────────────────────
+
+/** Mirrors the server's check, so the UI only offers what will succeed. */
+export function canManageTeam(role) {
+  return TEAM_MANAGER_ROLES.includes(role)
+}
+
+/**
+ * Workspace people who could join this team: not already on it, and
+ * carrying a real id to submit. Sorted by name for scanning.
+ */
+export function availableMembers(team = {}) {
+  const onTeam = new Set((team.members || []).map(m => m.userId))
+  return (team.workspacePeople || [])
+    .filter(person => person.userId != null && !onTeam.has(person.userId))
+    .sort((a, b) => a.name.localeCompare(b.name))
+}
+
+async function postJson(path, body) {
+  const token = localStorage.getItem('jwt_token')
+  const res = await fetch(`${BASE_URL}${path}`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    body: JSON.stringify(body),
+  })
+  if (!res.ok) throw await parseApiError(res)
+  return res.json()
+}
+
+function addTeamMember(teamId, userId) {
+  return postJson('/team/addMember', { teamId, userId })
+}
+
+/**
+ * Adds each user in turn. One failure does not stop the rest, so the
+ * caller can report exactly who made it and who did not.
+ *
+ * @returns {Promise<{added: number[], failed: {userId: number, message: string}[]}>}
+ */
+export async function addTeamMembers(teamId, userIds = []) {
+  const added = []
+  const failed = []
+  for (const userId of userIds) {
+    try {
+      await addTeamMember(teamId, userId)
+      added.push(userId)
+    } catch (err) {
+      failed.push({ userId, message: err.message || 'Could not add this member.' })
+    }
+  }
+  return { added, failed }
+}
+
+// ── Creating teams ───────────────────────────────────────────
+// POST /team/add takes `{teamName, workSpaceId}` (the server's
+// spelling) and adds the caller as the team's first member. The server
+// does not check the caller's role, so the UI only offers workspaces
+// the user owns or admins: the same rule as adding members, so a new
+// team is never one its creator cannot then staff.
+
+/** Workspaces the user may create a team in, sorted by name. */
+export function teamHomes(workspaces = []) {
+  return workspaces
+    .filter(w => w.workspaceId != null && canManageTeam(w.role))
+    .sort((a, b) => a.name.localeCompare(b.name))
+}
+
+/**
+ * Creates a team inside a workspace. Validated here because the server
+ * would happily store a blank name.
+ *
+ * @returns {Promise<{teamId: number, teamName: string, count: number}>}
+ */
+export async function createTeam({ name, workspaceId } = {}) {
+  const teamName = (name || '').trim()
+  if (!teamName) throw new Error('Give the team a name.')
+  if (workspaceId == null) throw new Error('Pick a workspace for the team.')
+  return postJson('/team/add', { teamName, workSpaceId: workspaceId })
 }

@@ -1,5 +1,15 @@
-import { describe, test, expect } from 'vitest'
-import { flattenTeams, largestTeam, sortTeams, filterTeams } from '../teamsApi'
+import { describe, test, expect, vi, beforeEach, afterEach } from 'vitest'
+import {
+  flattenTeams,
+  largestTeam,
+  sortTeams,
+  filterTeams,
+  canManageTeam,
+  availableMembers,
+  addTeamMembers,
+  teamHomes,
+  createTeam,
+} from '../teamsApi'
 
 const workspaces = [
   {
@@ -120,5 +130,173 @@ describe('filterTeams', () => {
 
   test('returns an empty array when nothing matches', () => {
     expect(filterTeams(teams, 'zzz')).toEqual([])
+  })
+})
+
+describe('flattenTeams — membership', () => {
+  test('carries the team\'s members and the workspace\'s people', () => {
+    const sara = { userId: 11, name: 'Sara Nolan', email: 'sara@example.com' }
+    const [team] = flattenTeams([
+      { workspaceId: 1, name: 'W', role: 'OWNER', people: [sara], teams: [{ id: 3, name: 'T', members: [sara] }] },
+    ])
+
+    expect(team.members).toEqual([sara])
+    expect(team.workspacePeople).toEqual([sara])
+  })
+
+  test('defaults both lists to empty', () => {
+    const [team] = flattenTeams([{ workspaceId: 1, name: 'W', role: 'OWNER', teams: [{ id: 3, name: 'T' }] }])
+
+    expect(team.members).toEqual([])
+    expect(team.workspacePeople).toEqual([])
+  })
+})
+
+describe('canManageTeam', () => {
+  test('lets owners and admins manage teams', () => {
+    expect(canManageTeam('OWNER')).toBe(true)
+    expect(canManageTeam('ADMIN')).toBe(true)
+  })
+
+  test('refuses members, viewers and unknown roles', () => {
+    expect(canManageTeam('MEMBER')).toBe(false)
+    expect(canManageTeam('VIEWER')).toBe(false)
+    expect(canManageTeam(undefined)).toBe(false)
+  })
+})
+
+describe('availableMembers', () => {
+  const sara = { userId: 11, name: 'Sara Nolan' }
+  const dan = { userId: 12, name: 'Dan Kite' }
+  const aria = { userId: 13, name: 'Aria Patel' }
+
+  test('returns workspace people who are not already on the team, sorted by name', () => {
+    const team = { members: [sara], workspacePeople: [sara, dan, aria] }
+
+    expect(availableMembers(team)).toEqual([aria, dan])
+  })
+
+  test('drops people without an id, since they cannot be submitted', () => {
+    const team = { members: [], workspacePeople: [{ userId: null, name: 'Ghost' }, dan] }
+
+    expect(availableMembers(team)).toEqual([dan])
+  })
+
+  test('returns an empty list for a team with no workspace people', () => {
+    expect(availableMembers({})).toEqual([])
+  })
+})
+
+describe('addTeamMembers', () => {
+  const fetchMock = vi.fn()
+
+  beforeEach(() => {
+    fetchMock.mockReset()
+    vi.stubGlobal('fetch', fetchMock)
+    localStorage.setItem('jwt_token', 'tok')
+  })
+
+  afterEach(() => {
+    vi.unstubAllGlobals()
+    localStorage.clear()
+  })
+
+  const ok = () => ({ ok: true, status: 200, json: async () => ({}) })
+  const fail = (status, message) => ({ ok: false, status, text: async () => JSON.stringify({ message }) })
+
+  test('posts one request per user with the auth header', async () => {
+    fetchMock.mockResolvedValue(ok())
+
+    const result = await addTeamMembers(3, [11, 12])
+
+    expect(fetchMock).toHaveBeenCalledTimes(2)
+    const [url, options] = fetchMock.mock.calls[0]
+    expect(url).toMatch(/\/team\/addMember$/)
+    expect(options.method).toBe('POST')
+    expect(options.headers.Authorization).toBe('Bearer tok')
+    expect(JSON.parse(options.body)).toEqual({ teamId: 3, userId: 11 })
+    expect(result).toEqual({ added: [11, 12], failed: [] })
+  })
+
+  test('keeps going past a failure and reports it with the server message', async () => {
+    fetchMock
+      .mockResolvedValueOnce(fail(409, 'Sara Nolan is already on Design'))
+      .mockResolvedValueOnce(ok())
+
+    const result = await addTeamMembers(3, [11, 12])
+
+    expect(result).toEqual({
+      added: [12],
+      failed: [{ userId: 11, message: 'Sara Nolan is already on Design' }],
+    })
+  })
+})
+
+describe('teamHomes', () => {
+  test('keeps only workspaces the user owns or admins, sorted by name', () => {
+    const homes = teamHomes([
+      { workspaceId: 1, name: 'Product Core', role: 'OWNER' },
+      { workspaceId: 2, name: 'Growth Lab', role: 'ADMIN' },
+      { workspaceId: 3, name: 'Ops', role: 'MEMBER' },
+    ])
+
+    expect(homes.map(w => w.workspaceId)).toEqual([2, 1])
+  })
+
+  test('skips workspaces without an id to submit', () => {
+    expect(teamHomes([{ name: 'Demo', role: 'OWNER' }])).toEqual([])
+  })
+
+  test('returns an empty list when given nothing', () => {
+    expect(teamHomes()).toEqual([])
+  })
+})
+
+describe('createTeam', () => {
+  const fetchMock = vi.fn()
+
+  beforeEach(() => {
+    fetchMock.mockReset()
+    vi.stubGlobal('fetch', fetchMock)
+    localStorage.setItem('jwt_token', 'tok')
+  })
+
+  afterEach(() => {
+    vi.unstubAllGlobals()
+    localStorage.clear()
+  })
+
+  test('posts the trimmed name and workspace in the shape the server expects', async () => {
+    const created = { teamId: 9, teamName: 'Design', count: 1 }
+    fetchMock.mockResolvedValue({ ok: true, status: 200, json: async () => created })
+
+    const result = await createTeam({ name: '  Design  ', workspaceId: 1 })
+
+    const [url, options] = fetchMock.mock.calls[0]
+    expect(url).toMatch(/\/team\/add$/)
+    expect(options.method).toBe('POST')
+    expect(options.headers.Authorization).toBe('Bearer tok')
+    expect(JSON.parse(options.body)).toEqual({ teamName: 'Design', workSpaceId: 1 })
+    expect(result).toEqual(created)
+  })
+
+  test('rejects a blank name without calling the server', async () => {
+    await expect(createTeam({ name: '   ', workspaceId: 1 })).rejects.toThrow(/name/i)
+    expect(fetchMock).not.toHaveBeenCalled()
+  })
+
+  test('rejects a missing workspace without calling the server', async () => {
+    await expect(createTeam({ name: 'Design' })).rejects.toThrow(/workspace/i)
+    expect(fetchMock).not.toHaveBeenCalled()
+  })
+
+  test('surfaces the server message on failure', async () => {
+    fetchMock.mockResolvedValue({
+      ok: false,
+      status: 404,
+      text: async () => JSON.stringify({ message: 'Workspace is Not found' }),
+    })
+
+    await expect(createTeam({ name: 'Design', workspaceId: 1 })).rejects.toThrow('Workspace is Not found')
   })
 })

@@ -1,6 +1,7 @@
 import React from 'react'
-import { describe, test, expect } from 'vitest'
+import { describe, test, expect, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import TeamCard from '../TeamCard'
 
 const team = (overrides = {}) => ({
@@ -62,5 +63,21 @@ describe('TeamCard', () => {
     render(<TeamCard team={team({ role: 'ADMIN' })} largest={6} />)
 
     expect(screen.getByText('admin')).toBeInTheDocument()
+  })
+
+  test('offers no add button unless the page passes a handler', () => {
+    render(<TeamCard team={team()} largest={6} />)
+
+    expect(screen.queryByRole('button', { name: /Add members/ })).not.toBeInTheDocument()
+  })
+
+  test('calls back with the team when add members is clicked', async () => {
+    const onAddMembers = vi.fn()
+    const t = team()
+    render(<TeamCard team={t} largest={6} onAddMembers={onAddMembers} />)
+
+    await userEvent.click(screen.getByRole('button', { name: 'Add members to Design' }))
+
+    expect(onAddMembers).toHaveBeenCalledWith(t)
   })
 })

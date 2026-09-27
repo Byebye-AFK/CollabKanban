@@ -7,10 +7,17 @@ const apiWorkspace = {
   name: 'Product Core',
   role: 'OWNER',
   members: [
-    { userName: 'Sara Nolan', userEmail: 'sara@example.com' },
-    { userName: 'Dan Kite', userEmail: 'dan@example.com' },
+    { userId: 11, userName: 'Sara Nolan', userEmail: 'sara@example.com' },
+    { userId: 12, userName: 'Dan Kite', userEmail: 'dan@example.com' },
   ],
-  teams: [{ teamName: 'Design', count: 4 }],
+  teams: [
+    {
+      teamId: 3,
+      teamName: 'Design',
+      count: 4,
+      members: [{ userId: 11, userName: 'Sara Nolan', userEmail: 'sara@example.com' }],
+    },
+  ],
   boards: [{ boardId: 1, name: 'Sprint 24', columns: [{ columnId: 1, name: 'Done', cards: [{}] }] }],
 }
 
@@ -33,6 +40,26 @@ describe('normalizeWorkspace', () => {
     const ws = { ...apiWorkspace, members: ['Aria Patel'] }
 
     expect(normalizeWorkspace(ws).members).toEqual(['Aria Patel'])
+  })
+
+  test('keeps each member\'s id alongside their name as people', () => {
+    expect(normalizeWorkspace(apiWorkspace).people).toEqual([
+      { userId: 11, name: 'Sara Nolan', email: 'sara@example.com' },
+      { userId: 12, name: 'Dan Kite', email: 'dan@example.com' },
+    ])
+  })
+
+  test('gives plain string members a null id, so they can never be submitted', () => {
+    const ws = { ...apiWorkspace, members: ['Aria Patel'] }
+
+    expect(normalizeWorkspace(ws).people).toEqual([{ userId: null, name: 'Aria Patel', email: null }])
+  })
+
+  test('maps a team\'s members onto people', () => {
+    const [team] = normalizeWorkspace(apiWorkspace).teams
+
+    expect(team.id).toBe(3)
+    expect(team.members).toEqual([{ userId: 11, name: 'Sara Nolan', email: 'sara@example.com' }])
   })
 
   test('maps teamName/count onto name/memberCount and gives each team an id', () => {
@@ -59,7 +86,7 @@ describe('normalizeWorkspace', () => {
       boards: [{ boardId: 4, name: 'Q3 Campaigns', cards: 22, done: 9 }],
     }
 
-    expect(normalizeWorkspace(demo)).toEqual(demo)
+    expect(normalizeWorkspace(demo)).toMatchObject(demo)
   })
 
   test('omits card counters a board never carried', () => {
@@ -77,6 +104,7 @@ describe('normalizeWorkspace', () => {
       name: 'Untitled workspace',
       role: 'MEMBER',
       members: [],
+      people: [],
       teams: [],
       boards: [],
     })

@@ -4,10 +4,21 @@ import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 
 const getDashboard = vi.fn()
+const addTeamMembers = vi.fn()
+const createTeam = vi.fn()
 
 vi.mock('../../api/dashboardApi', async (importOriginal) => {
   const actual = await importOriginal()
   return { ...actual, getDashboard: (...a) => getDashboard(...a) }
+})
+
+vi.mock('../../api/teamsApi', async (importOriginal) => {
+  const actual = await importOriginal()
+  return {
+    ...actual,
+    addTeamMembers: (...a) => addTeamMembers(...a),
+    createTeam: (...a) => createTeam(...a),
+  }
 })
 
 import TeamsPage from '../TeamsPage'
@@ -26,6 +37,8 @@ const workspace = {
 
 beforeEach(() => {
   getDashboard.mockReset()
+  addTeamMembers.mockReset()
+  createTeam.mockReset()
 })
 
 describe('TeamsPage', () => {
@@ -141,5 +154,93 @@ describe('TeamsPage', () => {
 
     await userEvent.click(rail.getByRole('button', { name: 'Boards' }))
     expect(onNavigate).toHaveBeenCalledWith('boards')
+  })
+
+  describe('adding members', () => {
+    const dan = { userId: 12, name: 'Dan Kite', email: 'dan@example.com' }
+    const managed = (role = 'OWNER') => ({
+      ...workspace,
+      role,
+      people: [dan],
+      teams: [{ id: 3, name: 'Design', memberCount: 0, members: [] }],
+    })
+
+    test('offers add members to owners and admins on live data', async () => {
+      getDashboard.mockResolvedValue({ workspaces: [managed('ADMIN')], stats: {}, live: true })
+      render(<TeamsPage user={{ name: 'Swathesh' }} />)
+
+      expect(await screen.findByRole('button', { name: 'Add members to Design' })).toBeInTheDocument()
+    })
+
+    test('hides it from plain members', async () => {
+      getDashboard.mockResolvedValue({ workspaces: [managed('MEMBER')], stats: {}, live: true })
+      render(<TeamsPage user={{ name: 'Swathesh' }} />)
+      await screen.findByRole('heading', { name: 'Design' })
+
+      expect(screen.queryByRole('button', { name: /Add members/ })).not.toBeInTheDocument()
+    })
+
+    test('hides it on sample data, where nothing can be saved', async () => {
+      getDashboard.mockResolvedValue({ workspaces: [managed()], stats: {}, live: false })
+      render(<TeamsPage user={{ name: 'Swathesh' }} />)
+      await screen.findByRole('heading', { name: 'Design' })
+
+      expect(screen.queryByRole('button', { name: /Add members/ })).not.toBeInTheDocument()
+    })
+
+    test('adds the picked people, reloads the teams and confirms', async () => {
+      getDashboard.mockResolvedValue({ workspaces: [managed()], stats: {}, live: true })
+      addTeamMembers.mockResolvedValue({ added: [12], failed: [] })
+      render(<TeamsPage user={{ name: 'Swathesh' }} />)
+
+      await userEvent.click(await screen.findByRole('button', { name: 'Add members to Design' }))
+      await userEvent.click(screen.getByRole('checkbox', { name: /Dan Kite/ }))
+      await userEvent.click(screen.getByRole('button', { name: 'Add 1 member' }))
+
+      expect(addTeamMembers).toHaveBeenCalledWith(3, [12])
+      expect(await screen.findByText('Added 1 member to Design')).toBeInTheDocument()
+      expect(getDashboard).toHaveBeenCalledTimes(2)
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    })
+  })
+
+  describe('creating teams', () => {
+    test('offers new team to owners and admins on live data', async () => {
+      getDashboard.mockResolvedValue({ workspaces: [workspace], stats: {}, live: true })
+      render(<TeamsPage user={{ name: 'Swathesh' }} />)
+
+      expect(await screen.findByRole('button', { name: 'New team' })).toBeInTheDocument()
+    })
+
+    test('hides it when the user manages no workspace', async () => {
+      getDashboard.mockResolvedValue({ workspaces: [{ ...workspace, role: 'MEMBER' }], stats: {}, live: true })
+      render(<TeamsPage user={{ name: 'Swathesh' }} />)
+      await screen.findByRole('heading', { name: 'Design' })
+
+      expect(screen.queryByRole('button', { name: 'New team' })).not.toBeInTheDocument()
+    })
+
+    test('hides it on sample data, where nothing can be saved', async () => {
+      getDashboard.mockResolvedValue({ workspaces: [workspace], stats: {}, live: false })
+      render(<TeamsPage user={{ name: 'Swathesh' }} />)
+      await screen.findByRole('heading', { name: 'Design' })
+
+      expect(screen.queryByRole('button', { name: 'New team' })).not.toBeInTheDocument()
+    })
+
+    test('creates the team, reloads the teams and confirms', async () => {
+      getDashboard.mockResolvedValue({ workspaces: [workspace], stats: {}, live: true })
+      createTeam.mockResolvedValue({ teamId: 9, teamName: 'QA', count: 1 })
+      render(<TeamsPage user={{ name: 'Swathesh' }} />)
+
+      await userEvent.click(await screen.findByRole('button', { name: 'New team' }))
+      await userEvent.type(screen.getByLabelText('Team name'), 'QA')
+      await userEvent.click(screen.getByRole('button', { name: 'Create team' }))
+
+      expect(createTeam).toHaveBeenCalledWith({ name: 'QA', workspaceId: 1 })
+      expect(await screen.findByText('Created QA in Product Core')).toBeInTheDocument()
+      expect(getDashboard).toHaveBeenCalledTimes(2)
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    })
   })
 })

@@ -50,3 +50,181 @@
 .tms-meter { flex: 1; }
 
 .tms-card .lib-meta { text-transform: capitalize; }
+
+/* ── Add members ────────────────────────────────────────────
+   Owners and admins get a quiet action at the foot of each card. */
+.tms-add {
+  align-self: flex-start;
+  margin-top: 10px;
+  padding: 5px 11px;
+  border-radius: 99px;
+  background: var(--glass-2);
+  border: 1px solid var(--hairline);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink-2);
+  transition: background 150ms ease, color 150ms ease, border-color 150ms ease;
+}
+.tms-add:hover { background: #fff; color: var(--blue); border-color: rgba(46, 107, 246, 0.35); }
+.tms-add:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
+
+/* The dialog renders inside .dash (not portalled) so it inherits the
+   shell's tokens; fixed positioning escapes the scroll port. */
+.tms-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  background: rgba(16, 19, 31, 0.28);
+  -webkit-backdrop-filter: blur(6px);
+          backdrop-filter: blur(6px);
+  animation: tms-fade 180ms ease;
+}
+
+.tms-modal {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  width: 100%;
+  max-width: 440px;
+  max-height: calc(100vh - 32px);
+  padding: 22px 22px 18px;
+  border-radius: var(--r-xl);
+  background: linear-gradient(155deg, rgba(255,255,255,0.94), rgba(255,255,255,0.84));
+  -webkit-backdrop-filter: var(--blur);
+          backdrop-filter: var(--blur);
+  border: 1px solid rgba(255, 255, 255, 0.9);
+  box-shadow: var(--lift-3), var(--inner-top);
+  animation: tms-modal-in 260ms cubic-bezier(.2, .8, .3, 1);
+}
+
+@keyframes tms-fade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes tms-modal-in {
+  from { opacity: 0; transform: translateY(14px) scale(0.97); }
+  to   { opacity: 1; transform: none; }
+}
+
+.tms-modal-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.tms-modal-kicker {
+  display: block;
+  margin-bottom: 4px;
+  font-size: 11.5px;
+  font-weight: 650;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--ink-4);
+}
+.tms-modal-title {
+  margin: 0;
+  font-family: var(--display);
+  font-size: 19px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: var(--ink);
+}
+.tms-modal-x {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 30px;
+  height: 30px;
+  border-radius: 9px;
+  color: var(--ink-4);
+}
+.tms-modal-x:hover { background: rgba(16, 19, 31, 0.07); color: var(--ink); }
+
+.tms-modal-search {
+  width: 100%;
+  padding: 10px 13px;
+  border-radius: var(--r-sm);
+  background: rgba(255, 255, 255, 0.72);
+  border: 1px solid rgba(16, 19, 31, 0.12);
+  font-size: 14px;
+  color: var(--ink);
+  outline: none;
+}
+.tms-modal-search:focus {
+  background: #fff;
+  border-color: rgba(46, 107, 246, 0.5);
+  box-shadow: 0 0 0 4px rgba(46, 107, 246, 0.12);
+}
+
+.tms-people {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  overflow-y: auto;
+  min-height: 0;
+}
+
+.tms-person {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 8px 10px;
+  border-radius: var(--r-sm);
+  cursor: pointer;
+}
+.tms-person:hover { background: rgba(16, 19, 31, 0.04); }
+.tms-person input { flex: none; width: 16px; height: 16px; accent-color: var(--blue); }
+
+.tms-avatar {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: var(--c);
+  font-size: 11.5px;
+  font-weight: 700;
+  color: #fff;
+}
+
+.tms-person-text { display: flex; flex-direction: column; min-width: 0; }
+.tms-person-name { font-size: 14px; font-weight: 550; color: var(--ink); }
+.tms-person-email {
+  overflow: hidden;
+  font-size: 12px;
+  color: var(--ink-4);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tms-modal-empty { margin: 0; padding: 18px 10px; text-align: center; font-size: 13.5px; color: var(--ink-4); }
+
+.tms-modal-error {
+  padding: 9px 12px;
+  border-radius: var(--r-sm);
+  background: rgba(240, 99, 122, 0.1);
+  border: 1px solid rgba(240, 99, 122, 0.28);
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: #B3223C;
+}
+
+.tms-field { display: flex; flex-direction: column; gap: 6px; }
+.tms-field-label { font-size: 12px; font-weight: 600; color: var(--ink-3); }
+.tms-select { appearance: auto; cursor: pointer; }
+
+.tms-modal-foot { display: flex; justify-content: flex-end; gap: 8px; }
+.tms-btn, .tms-btn-ghost {
+  padding: 9px 16px;
+  border-radius: var(--r-sm);
+  font-size: 13.5px;
+  font-weight: 600;
+}
+.tms-btn { background: var(--blue); color: #fff; }
+.tms-btn:hover:not(:disabled) { background: var(--blue-dark); }
+.tms-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+.tms-btn-ghost { color: var(--ink-3); }
+.tms-btn-ghost:hover { background: rgba(16, 19, 31, 0.06); color: var(--ink); }
+
+@media (prefers-reduced-motion: reduce) {
+  .tms-overlay, .tms-modal { animation: none; }
+}

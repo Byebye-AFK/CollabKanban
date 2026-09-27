@@ -1,8 +1,11 @@
 package com.collabKanban.Kanban.Team;
 
+import com.collabKanban.Kanban.DTO.CreateTeamReq;
 import com.collabKanban.Kanban.DTO.TeamMemberCreateReq;
 import com.collabKanban.Kanban.Response.TeamMemberRes;
-import org.springframework.beans.factory.annotation.Autowired;
+import com.collabKanban.Kanban.Response.TeamResponse;
+import com.collabKanban.Kanban.authentication.JwtService;
+
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -13,25 +16,31 @@ public class TeamController {
 
     TeamService teamService;
     TeamMembersService membersService;
+    JwtService jwtService;
 
-    public  TeamController(TeamService service,TeamMembersService membersService){
+    public  TeamController(TeamService service,TeamMembersService membersService,JwtService jwtService){
 
         teamService=service;
         this.membersService=membersService;
+        this.jwtService=jwtService;
     }
 
-    @PostMapping("/add/{name}")
-    public ResponseEntity<String> addTeam(@PathVariable String name){
+    @PostMapping("/add")
+    public ResponseEntity<TeamResponse> addTeam(@RequestBody CreateTeamReq req, @RequestHeader("Authorization") String authHeader){
+        String userEmail=jwtService.extractUserName(authHeader.replace("Bearer ",""));
 
-        return new ResponseEntity<>(teamService.createTeam(name), HttpStatus.OK);
+        return new ResponseEntity<>(teamService.createTeam(req,userEmail), HttpStatus.OK);
 
 
     }
 
     @PostMapping("/addMember")
-    public ResponseEntity<TeamMemberRes> addMember(@RequestBody TeamMemberCreateReq req){
+    public ResponseEntity<TeamMemberRes> addMember(@RequestBody TeamMemberCreateReq req,
+                                                   @RequestHeader("Authorization") String authHeader){
 
-        return new ResponseEntity<>(membersService.addMembers(req),HttpStatus.OK);
+        String callerEmail=jwtService.extractUserName(authHeader.replace("Bearer ",""));
+
+        return new ResponseEntity<>(membersService.addMembers(req,callerEmail),HttpStatus.OK);
 
     }
 

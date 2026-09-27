@@ -14,7 +14,7 @@ function memberLabel(count) {
   return `${count} member${count === 1 ? '' : 's'}`
 }
 
-export default function TeamCard({ team, index = 0, largest = 1 }) {
+export default function TeamCard({ team, index = 0, largest = 1, onAddMembers }) {
   const { name, workspaceName, memberCount, role } = team
 
   const color = colorFor(workspaceName)
@@ -47,6 +47,19 @@ export default function TeamCard({ team, index = 0, largest = 1 }) {
         </div>
         <span className="lib-meta">{role.toLowerCase()}</span>
       </div>
+
+      {/* Only offered when the page has decided this user may manage the
+          team — the card itself makes no permission call. */}
+      {onAddMembers && (
+        <button
+          type="button"
+          className="tms-add"
+          onClick={() => onAddMembers(team)}
+          aria-label={`Add members to ${name}`}
+        >
+          <span aria-hidden="true">+</span> Add members
+        </button>
+      )}
     </article>
   )
 }
