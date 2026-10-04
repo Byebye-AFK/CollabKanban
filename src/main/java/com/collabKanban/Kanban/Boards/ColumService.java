@@ -43,6 +43,8 @@ public class ColumService {
         colum.setPosition(position);
         colum.setName(req.getName());
         colum.setBoard(board);
+
+
         response.setColumnId(colum.getColumnId());
         response.setName(colum.getName());
         columRepo.save(colum);

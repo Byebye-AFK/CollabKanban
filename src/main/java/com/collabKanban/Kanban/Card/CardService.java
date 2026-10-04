@@ -9,9 +9,11 @@ import com.collabKanban.Kanban.UserSpace.UserRepo;
 import com.collabKanban.Kanban.UserSpace.Users;
 import lombok.NoArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
 
 @Service
 @NoArgsConstructor
@@ -20,8 +22,9 @@ public class CardService {
     private  CardRepo cardRepo;
     private ColumRepo columRepo;
     private SimpMessagingTemplate messagingTemplate;
+
     @Autowired
-    public void setMessagingTemplate(SimpMessagingTemplate messagingTemplate){ this.messagingTemplate= messagingTemplate;};
+    public void setMessagingTemplate(SimpMessagingTemplate messagingTemplate){ this.messagingTemplate= messagingTemplate;}
    @Autowired
    public void cardSetter(CardRepo repo){
        cardRepo=repo;
@@ -39,12 +42,10 @@ public class CardService {
 
    public CardResponse createCard(CreateCardReq cardReq){
        Card card=new Card();
-       System.out.println(" ");
-       System.out.println("Called Create Card");
-       System.out.println(" ");
-       System.out.println("userId: "+cardReq.getAssignedTo());
+
        CardResponse response=new CardResponse();
-       Users user=userRepo.getReferenceById(cardReq.getAssignedTo());
+       Users user= cardReq.getAssignedTo()==null
+                   ? null:userRepo.getReferenceById(cardReq.getAssignedTo());
        Colum column=columRepo.getReferenceById(cardReq.getColumnId());
 
 
@@ -55,23 +56,32 @@ public class CardService {
 
 
        card.setPosition(positon);
-       response.setPosition(positon);
-       card.setTitle(cardReq.getTitle());
-       response.setTitle(card.getTitle());
-       card.setAssignedTo(user);
-       response.setAssignedTo(user.getUserId());
-       response.setCardId(card.getCardId());
 
+       card.setTitle(cardReq.getTitle());
+
+
+       if (user!=null) {
+           card.setAssignedTo(user);
+
+       }
        card.setDescription(cardReq.getDescription());
-       response.setDescription(card.getDescription());
+
        card.setColum(column);
 
         cardRepo.save(card);
 
+       response.setCardId(card.getCardId());
+       response.setPosition(positon);
+       response.setTitle(card.getTitle());
+       if(user!=null){
+           response.setAssignedTo(user.getUserId());
+       }
+       response.setDescription(card.getDescription());
 
    return response; }
 
 
+    @Transactional
     public CardResponse MoveCard(Long cardId, MoveCardReq req){
        CardResponse res=new CardResponse();
        Card card=cardRepo.findByCardId(cardId);
@@ -92,22 +102,26 @@ public class CardService {
 
     public CardResponse getCard(Long id){
        CardResponse response=new CardResponse();
-       Card card=cardRepo.getReferenceById(id);
+       Card card= cardRepo.findByCardId(id)==null ? null: cardRepo.findByCardId(id);
 
 
-       response.setCardId(id);
-       response.setTitle(card.getTitle());
-       response.setDescription(card.getDescription());
-       response.setPosition(card.getPosition());
-       response.setAssignedTo(card.getAssignedTo().getUserId());
+       if(card!=null){
+           response.setCardId(id);
+           response.setTitle(card.getTitle());
+           response.setDescription(card.getDescription());
+           response.setPosition(card.getPosition());
+           response.setAssignedTo(card.getAssignedTo().getUserId());
 
+       }else{
+           throw new ResponseStatusException( HttpStatus.NOT_FOUND,"Card is not Found");
+       }
        return response;
 
     }
 
     public CardResponse deleteCard(Long id){
        CardResponse response=new CardResponse();
-       Card card=cardRepo.getReferenceById(id);
+       Card card=cardRepo.findByCardId(id);
 
        if(card!=null){
            response.setCardId(card.getCardId());
