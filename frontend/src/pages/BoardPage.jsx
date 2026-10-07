@@ -3,6 +3,8 @@ import { useBoard } from '../hooks/useBoard'
 import KanbanBoard from '../components/KanbanBoard'
 import BoardSidebar from '../components/board/BoardSidebar'
 import BoardTopbar from '../components/board/BoardTopbar'
+import AddTeamMembersModal from '../components/teams/AddTeamMembersModal'
+import { useBoardTeam } from '../hooks/useBoardTeam'
 import './BoardPage.css'
 
 /**
@@ -52,6 +54,11 @@ export default function BoardPage({
     deleteCard,
     deleteColumn,
   } = useBoard()
+
+  // The board only carries its team's id; the team itself comes from the
+  // workspace the board was opened in.
+  const { team, canManage, addMembers } = useBoardTeam(workspace, board?.teamId)
+  const [addingPeople, setAddingPeople] = useState(false)
 
   const [query, setQuery] = useState('')
   const [collapsed, setCollapsed] = useState(false)
@@ -138,9 +145,20 @@ export default function BoardPage({
           onAddColumn={() => setCreateColumnOpen(true)}
           matchLabel={matchLabel}
           isLive={isLive}
+          team={team}
+          onAddPeople={canManage ? () => setAddingPeople(true) : undefined}
         />
         {children}
       </div>
+      {/* Rendered here, not inside the top bar: its backdrop-filter would
+          make it the containing block for this fixed overlay. */}
+      {addingPeople && team && (
+        <AddTeamMembersModal
+          team={team}
+          onSubmit={addMembers}
+          onClose={() => setAddingPeople(false)}
+        />
+      )}
     </div>
   )
 

@@ -1,5 +1,6 @@
 package com.collabKanban.Kanban.Boards;
 
+import com.collabKanban.Kanban.Team.Team;
 import com.collabKanban.Kanban.WorkSpace.Workspace;
 import jakarta.persistence.*;
 import lombok.Getter;
@@ -31,7 +32,9 @@ public class Board {
                 orphanRemoval=true)
     List<Colum> columns=new ArrayList<>();
 
-
+    @ManyToOne
+    @JoinColumn(name="teamId")   // nullable: a board does not have to belong to a team
+    private Team team;
 
 
 }

@@ -10,6 +10,7 @@ import java.util.List;
 @Getter
 @Setter
 public class BoardResponse {
+    private Long teamId;
     private Long boardId;
     private String name;
     private List<ColumResponse> columns;

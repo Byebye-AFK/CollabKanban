@@ -9,6 +9,8 @@ import {
   addTeamMembers,
   teamHomes,
   createTeam,
+  teamForBoard,
+  withTeamMembers,
 } from '../teamsApi'
 
 const workspaces = [
@@ -298,5 +300,93 @@ describe('createTeam', () => {
     })
 
     await expect(createTeam({ name: 'Design', workspaceId: 1 })).rejects.toThrow('Workspace is Not found')
+  })
+})
+
+// ── Teams seen from a board ──────────────────────────────────
+
+describe('teamForBoard', () => {
+  const sara = { userId: 11, name: 'Sara Nolan' }
+  const dan = { userId: 12, name: 'Dan Kite' }
+  const workspace = {
+    workspaceId: 1,
+    name: 'Product Core',
+    role: 'OWNER',
+    people: [dan],
+    teams: [{ id: 7, name: 'Design', memberCount: 1, members: [sara] }],
+  }
+
+  test('finds the board\'s team in the shape the add-members dialog reads', () => {
+    const team = teamForBoard(workspace, 7)
+
+    expect(team).toMatchObject({
+      id: 7,
+      name: 'Design',
+      members: [sara],
+      workspacePeople: [dan],
+      workspaceName: 'Product Core',
+      role: 'OWNER',
+    })
+  })
+
+  test('matches ids whether the board sends a number or a string', () => {
+    expect(teamForBoard(workspace, '7').id).toBe(7)
+  })
+
+  test('returns null when the board has no team', () => {
+    expect(teamForBoard(workspace, null)).toBeNull()
+    expect(teamForBoard(workspace, undefined)).toBeNull()
+  })
+
+  test('returns null when the team is not in this workspace', () => {
+    expect(teamForBoard(workspace, 99)).toBeNull()
+  })
+
+  test('returns null without a workspace', () => {
+    expect(teamForBoard(null, 7)).toBeNull()
+  })
+})
+
+describe('withTeamMembers', () => {
+  const sara = { userId: 11, name: 'Sara Nolan' }
+  const dan = { userId: 12, name: 'Dan Kite' }
+  const base = {
+    workspaceId: 1,
+    teams: [
+      { id: 7, name: 'Design', memberCount: 1, members: [sara] },
+      { id: 8, name: 'QA', memberCount: 0, members: [] },
+    ],
+  }
+
+  test('appends the people to the team and raises its count', () => {
+    const next = withTeamMembers(base, 7, [dan])
+
+    expect(next.teams[0].members).toEqual([sara, dan])
+    expect(next.teams[0].memberCount).toBe(2)
+  })
+
+  test('returns a new workspace and leaves the original untouched', () => {
+    const next = withTeamMembers(base, 7, [dan])
+
+    expect(next).not.toBe(base)
+    expect(base.teams[0].members).toEqual([sara])
+    expect(base.teams[0].memberCount).toBe(1)
+  })
+
+  test('leaves other teams as they were', () => {
+    const next = withTeamMembers(base, 7, [dan])
+
+    expect(next.teams[1]).toBe(base.teams[1])
+  })
+
+  test('skips people who are already on the team', () => {
+    const next = withTeamMembers(base, 7, [sara, dan])
+
+    expect(next.teams[0].members).toEqual([sara, dan])
+    expect(next.teams[0].memberCount).toBe(2)
+  })
+
+  test('returns the workspace unchanged when there is nothing to add', () => {
+    expect(withTeamMembers(base, 7, [])).toBe(base)
   })
 })

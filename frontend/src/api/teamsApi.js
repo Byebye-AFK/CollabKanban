@@ -129,6 +129,47 @@ export async function addTeamMembers(teamId, userIds = []) {
   return { added, failed }
 }
 
+// ── Teams seen from a board ──────────────────────────────────
+// A board carries only its `teamId`. The team's members and the
+// workspace's people are already in the workspace the board was opened
+// from, so the board resolves them locally instead of fetching again.
+
+/**
+ * The team a board belongs to, in the same shape `flattenTeams` yields
+ * so the add-members dialog works on it unchanged. Ids are compared as
+ * strings: a board sends a number, the demo snapshot uses strings.
+ *
+ * @returns {object|null} null when the board has no team, or the team
+ *   is not in this workspace
+ */
+export function teamForBoard(workspace, teamId) {
+  if (!workspace || teamId == null) return null
+  return flattenTeams([workspace]).find(t => String(t.id) === String(teamId)) ?? null
+}
+
+/**
+ * The workspace with `people` appended to one team, without mutating the
+ * input. Already-present people are skipped, so a retry cannot list
+ * someone twice. Returns the same workspace when nothing is new.
+ */
+export function withTeamMembers(workspace, teamId, people = []) {
+  const team = (workspace?.teams || []).find(t => String(t.id) === String(teamId))
+  if (!team) return workspace
+
+  const onTeam = new Set((team.members || []).map(m => m.userId))
+  const fresh = people.filter(p => !onTeam.has(p.userId))
+  if (fresh.length === 0) return workspace
+
+  return {
+    ...workspace,
+    teams: workspace.teams.map(t =>
+      t === team
+        ? { ...t, members: [...(t.members || []), ...fresh], memberCount: (t.memberCount ?? 0) + fresh.length }
+        : t,
+    ),
+  }
+}
+
 // ── Creating teams ───────────────────────────────────────────
 // POST /team/add takes `{teamName, workSpaceId}` (the server's
 // spelling) and adds the caller as the team's first member. The server

@@ -10,4 +10,5 @@ public class CreateBoardReq {
     private String name;
     private Long workspaceId;
     private Long position;
+    private Long teamId;   // optional
 }

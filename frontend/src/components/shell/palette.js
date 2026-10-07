@@ -21,3 +21,13 @@ export function colorFor(name = '') {
   }
   return PALETTE[Math.abs(hash) % PALETTE.length]
 }
+
+/** Up to two capitals from a name, for avatar chips. */
+export function initials(name = '') {
+  return name
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map(w => w[0].toUpperCase())
+    .join('')
+}

@@ -1,5 +1,6 @@
 package com.collabKanban.Kanban.Team;
 
+import com.collabKanban.Kanban.Boards.Board;
 import com.collabKanban.Kanban.UserSpace.Users;
 import com.collabKanban.Kanban.WorkSpace.Workspace;
 import jakarta.persistence.*;
@@ -29,6 +30,9 @@ public class Team {
     @ManyToOne
     @JoinColumn(name="workspaceId")
     private Workspace workspaces;
+
+    @OneToMany(mappedBy = "team")
+    List<Board> boards=new ArrayList<>();
 
 
 }

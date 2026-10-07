@@ -1164,6 +1164,85 @@
   .brd-kbd { display: none; }
 }
 
+/* ══ Team members (top bar) ══════════════════════════════════ */
+/* Lifts the bar above the stage so the member list can drop over it. */
+.brd-topbar { z-index: 30; }
+
+.brd-members { position: relative; display: flex; align-items: center; gap: 9px; }
+
+.brd-members-btn {
+  display: flex;
+  align-items: center;
+  height: 38px;
+  padding: 0 6px;
+  border-radius: 11px;
+  background: rgba(255, 255, 255, 0.5);
+  border: 1px solid var(--glass-line-2);
+  transition: background 160ms ease, box-shadow 160ms ease;
+}
+.brd-members-btn:hover,
+.brd-members-btn[aria-expanded="true"] { background: rgba(255, 255, 255, 0.92); box-shadow: var(--lift-1); }
+.brd-members-btn:focus-visible,
+.brd-btn-ghost:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
+
+.brd-avatars { display: flex; align-items: center; }
+.brd-avatar {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: var(--c, var(--blue));
+  border: 2px solid rgba(255, 255, 255, 0.95);
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: #fff;
+}
+.brd-avatars .brd-avatar + .brd-avatar { margin-left: -8px; }
+.brd-avatar-more { background: var(--ink-3); }
+
+.brd-members-pop {
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
+  z-index: 80;
+  width: 280px;
+  max-height: 340px;
+  display: flex;
+  flex-direction: column;
+  padding: 10px;
+  border-radius: var(--r-md);
+  background: linear-gradient(155deg, rgba(255,255,255,0.97), rgba(255,255,255,0.9));
+  box-shadow: var(--lift-3), var(--inner-top);
+}
+.brd-members-head {
+  padding: 4px 8px 8px;
+  font-family: var(--display);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink);
+}
+.brd-members-list { margin: 0; padding: 0; list-style: none; overflow-y: auto; }
+.brd-members-item { display: flex; align-items: center; gap: 10px; padding: 7px 8px; border-radius: var(--r-sm); }
+.brd-members-item:hover { background: rgba(16, 19, 31, 0.04); }
+.brd-members-item .brd-avatar { width: 30px; height: 30px; border-width: 0; }
+.brd-members-text { display: flex; flex-direction: column; min-width: 0; }
+.brd-members-name { font-size: 13.5px; font-weight: 550; color: var(--ink); }
+.brd-members-email {
+  font-size: 12px;
+  color: var(--ink-4);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.brd-members-empty { margin: 0; padding: 14px 8px; font-size: 13px; text-align: center; color: var(--ink-4); }
+
+@media (max-width: 900px) {
+  .brd-members .brd-btn-ghost { padding: 0 12px; }
+}
+
 /* ── Reduced motion ─────────────────────────────────────────── */
 @media (prefers-reduced-motion: reduce) {
   .brd *, .brd *::before, .brd *::after {

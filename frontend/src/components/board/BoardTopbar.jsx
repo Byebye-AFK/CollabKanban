@@ -1,4 +1,5 @@
 import React, { useEffect, useRef } from 'react'
+import BoardMembers from './BoardMembers'
 
 /**
  * Glass top bar for the board.
@@ -31,6 +32,8 @@ export default function BoardTopbar({
   onAddColumn,
   matchLabel,
   isLive = true,
+  team = null,
+  onAddPeople,
 }) {
   const inputRef = useRef(null)
 
@@ -110,6 +113,9 @@ export default function BoardTopbar({
           </span>
         )}
         {matchLabel && <span className="brd-crumb-ws">{matchLabel}</span>}
+        {team && (
+          <BoardMembers teamName={team.name} members={team.members} onAddPeople={onAddPeople} />
+        )}
         <button className="brd-btn" onClick={onAddColumn}>
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"
             strokeWidth="2.2" strokeLinecap="round">

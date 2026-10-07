@@ -4,6 +4,8 @@ import com.collabKanban.Kanban.DTO.CreateBoardReq;
 import com.collabKanban.Kanban.Response.BoardResponse;
 import com.collabKanban.Kanban.Response.CardResponse;
 import com.collabKanban.Kanban.Response.ColumResponse;
+import com.collabKanban.Kanban.Team.Team;
+import com.collabKanban.Kanban.Team.TeamRepo;
 import com.collabKanban.Kanban.WorkSpace.Workspace;
 import com.collabKanban.Kanban.WorkSpace.WorkspaceRepo;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -20,6 +22,7 @@ public class BoardService {
     WorkspaceRepo workspaceRepo;
     BoardRepo boardRepo;
     ColumRepo columRepo;
+    TeamRepo teamRepo;
 
 
     @Autowired
@@ -35,6 +38,9 @@ public class BoardService {
     @Autowired
     private void setColumRepo(ColumRepo repo){ columRepo=repo; }
 
+    @Autowired
+    private void setTeamRepo(TeamRepo repo){ teamRepo=repo; }
+
     public BoardResponse createBoard(CreateBoardReq req){
         Board board=new Board();
         BoardResponse response=new BoardResponse();
@@ -43,10 +49,14 @@ public class BoardService {
         board.setPosition(req.getPosition());
         board.setName(req.getName());
         board.setWorkspace(workspace);
+        if (req.getTeamId() != null) {
+            board.setTeam(teamRepo.getReferenceById(req.getTeamId()));
+        }
         boardRepo.save(board);
 
         response.setBoardId(board.getBoardId());
         response.setName(board.getName());
+        response.setTeamId(req.getTeamId());
         response.setColumns( board.getColumns().stream().map( colum ->{ ColumResponse columnRes=new ColumResponse();
                                                                             columnRes.setColumnId(colum.getColumnId());
                                                                             columnRes.setName(colum.getName());
@@ -95,6 +105,8 @@ public class BoardService {
         response.setBoardId(boardId);
         response.setColumns(columns);
         response.setName(board.getName());
+        Team team=board.getTeam();
+        response.setTeamId(team == null ? null : team.getTeamId());
 
         return response;
     }
