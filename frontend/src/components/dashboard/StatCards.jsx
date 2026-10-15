@@ -1,81 +1,45 @@
 import React from 'react'
-import { PALETTE } from '../shell/palette'
+import { Chevron } from '../shell/icons'
 
 /**
- * "Your Space" — the four at-a-glance glass tiles that head the dashboard.
- * Two counters (workspaces / teams) whose footers carry a per-workspace
- * meter, and two "pick up where you left off" tiles.
+ * The four numbers that head the dashboard, as one quiet row.
+ *
+ * Two counters (workspaces, teams — the latter with a meter per
+ * workspace) and two "pick up where you left off" cells that open what
+ * they name.
  */
+const STAGGER_MS = 50
 
-const Arrow = ({ dir }) => (
-  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-    strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"
-    style={{ transform: dir === 'down' ? 'scaleY(-1)' : 'none' }}>
-    <path d="M4 17 10 11l4 4 6-6" /><path d="M15 9h5v5" />
-  </svg>
-)
-
-const ICONS = {
-  workspaces: ['M3 7.5 12 3l9 4.5-9 4.5-9-4.5z', 'M3 12l9 4.5 9-4.5', 'M3 16.5 12 21l9-4.5'],
-  teams: ['M16 20v-1.5a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4V20', 'M9 10.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7z', 'M22 20v-1.5a4 4 0 0 0-3-3.87', 'M16 3.6a4 4 0 0 1 0 7.75'],
-  clock: ['M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18z', 'M12 7v5l3.2 1.9'],
-  board: ['M3 4.5h18v15H3z', 'M9 4.5v15', 'M15 4.5v15'],
-}
-
-const TileIcon = ({ name }) => (
-  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-    strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
-    {ICONS[name].map((p, i) => <path key={i} d={p} />)}
-  </svg>
-)
-
-function Tile({ stat, index }) {
+function Stat({ stat, index }) {
   const clickable = !!stat.onClick
-  return (
-    <div
-      className={`dsh-stat dsh-glass dsh-in${stat.accent ? ' is-accent' : ''}${clickable ? ' is-clickable' : ''}`}
-      style={{ '--in': `${index * 70}ms` }}
-      onClick={stat.onClick}
-      role={clickable ? 'button' : undefined}
-      tabIndex={clickable ? 0 : undefined}
-      onKeyDown={e => {
-        if (clickable && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); stat.onClick() }
-      }}
-    >
-      <div className="dsh-stat-head">
-        <span className="dsh-stat-label">{stat.label}</span>
-        <span className="dsh-stat-icon"><TileIcon name={stat.icon} /></span>
-      </div>
+  const Tag = clickable ? 'button' : 'div'
 
-      <div className={`dsh-stat-value${stat.small ? ' is-small' : ''}`} title={String(stat.value)}>
+  return (
+    <Tag
+      className={`dsh-stat ui-in${clickable ? ' is-clickable' : ''}`}
+      style={{ '--in': `${index * STAGGER_MS}ms` }}
+      onClick={stat.onClick}
+      type={clickable ? 'button' : undefined}
+    >
+      <span className="dsh-stat-label">{stat.label}</span>
+      <span className={`dsh-stat-value${stat.small ? ' is-small' : ''}`} title={String(stat.value)}>
         {stat.value}
-      </div>
-      <div className="dsh-stat-meta">
-        {stat.trend && (
-          <span className={`dsh-trend ${stat.trend}`}><Arrow dir={stat.trend} />{stat.trendValue}</span>
-        )}
-        <span>{stat.meta}</span>
-      </div>
+      </span>
+      <span className="dsh-stat-meta">
+        {stat.meta}
+        {clickable && <Chevron size={12} className="dsh-stat-go" />}
+      </span>
 
       {stat.bars && (
-        <div className="dsh-stat-foot">
-          <div className="dsh-bars">
-            {stat.bars.map((b, i) => (
-              <span className="dsh-bar" key={i} title={b.title}>
-                <i style={{ '--c': b.color, '--w': `${b.pct}%`, '--md': `${240 + i * 90}ms` }} />
-              </span>
-            ))}
-          </div>
-          <div className="dsh-bars-label">{stat.barsLabel}</div>
-        </div>
+        <span className="dsh-bars" title={stat.barsLabel}>
+          {stat.bars.map((b, i) => (
+            <span className="dsh-bar" key={i} title={b.title}>
+              <i style={{ '--w': `${b.pct}%`, '--md': `${240 + i * 80}ms` }} />
+            </span>
+          ))}
+        </span>
       )}
-
-      {clickable && (
-        <div className="dsh-stat-foot">
-          <span className="dsh-open">Open <span>→</span></span>
-        </div>
-      )}
-    </div>
+    </Tag>
   )
 }
 
@@ -87,52 +51,40 @@ export default function StatCards({ stats, workspaces, onOpenWorkspace, onOpenBo
   const cards = [
     {
       label: 'Workspaces',
-      icon: 'workspaces',
       value: workspaces.length,
-      accent: true,
-      trend: 'up',
-      trendValue: `${boardCount} boards`,
-      meta: 'you are a member of',
+      meta: `${boardCount} boards`,
     },
     {
       label: 'Teams',
-      icon: 'teams',
       value: teamCount,
-      trend: openCards > 40 ? 'down' : 'up',
-      trendValue: `${openCards} open`,
-      meta: 'cards across teams',
-      bars: workspaces.map((w, i) => ({
-        color: PALETTE[i % PALETTE.length],
+      meta: `${openCards} open cards`,
+      bars: workspaces.map(w => ({
         pct: Math.round((w.teams.length / maxTeams) * 100),
         title: `${w.name} — ${w.teams.length} teams`,
       })),
-      barsLabel: 'teams per workspace',
+      barsLabel: 'Teams per workspace',
     },
     {
       label: 'Last workspace',
-      icon: 'clock',
       value: lastWorkspace ? lastWorkspace.name : 'None yet',
       small: true,
-      meta: lastWorkspace
-        ? `${lastWorkspace.teams.length} teams`
-        : 'open one to get started',
+      meta: lastWorkspace ? `${lastWorkspace.teams.length} teams` : 'Open one to get started',
       onClick: lastWorkspace ? () => onOpenWorkspace?.(lastWorkspace) : undefined,
     },
     {
       label: 'Last board',
-      icon: 'board',
       value: lastVisitedBoard ? lastVisitedBoard.name : 'None yet',
       small: true,
       meta: lastVisitedBoard
         ? `${lastVisitedBoard.workspaceName || 'Board'} · ${lastVisitedLabel}`
-        : 'no boards opened yet',
+        : 'No boards opened yet',
       onClick: lastVisitedBoard ? () => onOpenBoard?.(lastVisitedBoard.boardId) : undefined,
     },
   ]
 
   return (
     <section className="dsh-stats" aria-label="Your space">
-      {cards.map((c, i) => <Tile key={c.label} stat={c} index={i} />)}
+      {cards.map((c, i) => <Stat key={c.label} stat={c} index={i} />)}
     </section>
   )
 }

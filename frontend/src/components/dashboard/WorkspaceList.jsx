@@ -1,9 +1,12 @@
-import React, { useMemo, useState } from 'react'
+import React, { useCallback, useMemo, useRef, useState } from 'react'
 import Avatar from '../Avatar'
+import { SortIcon, PlusIcon } from '../shell/icons'
+import { colorFor } from '../shell/palette'
+import { useDismiss } from '../../hooks/useDismiss'
 
 /**
  * WorkspaceList — every workspace the user belongs to, with its teams,
- * boards, member stack and role, on a glass panel.
+ * boards, members and the user's role, as a bordered table.
  */
 
 const SORTS = [
@@ -11,9 +14,15 @@ const SORTS = [
   { id: 'boards',   label: 'Most boards' },
 ]
 
+/** Members and teams shown before collapsing into a +N. */
+const MAX_SHOWN = 3
+
 export default function WorkspaceList({ workspaces, onOpenWorkspace, onCreateWorkspace }) {
   const [sort, setSort] = useState('name')
   const [menuOpen, setMenuOpen] = useState(false)
+  const actionsRef = useRef(null)
+  const closeMenu = useCallback(() => setMenuOpen(false), [])
+  useDismiss(actionsRef, menuOpen, closeMenu)
 
   const rows = useMemo(() => {
     const copy = [...workspaces]
@@ -24,42 +33,36 @@ export default function WorkspaceList({ workspaces, onOpenWorkspace, onCreateWor
   }, [workspaces, sort])
 
   return (
-    <section className="dsh-panel dsh-glass dsh-in" style={{ '--in': '260ms' }} aria-label="Workspace list">
-      <div className="dsh-panel-head">
-        <div>
-          <h2 className="dsh-sec-title">Workspace List</h2>
-          <div className="dsh-sec-sub">
-            {workspaces.length} workspaces · sorted by {SORTS.find(s => s.id === sort).label.toLowerCase()}
-          </div>
-        </div>
+    <section className="app-panel ui-in" style={{ '--in': '200ms' }} aria-label="Workspace list">
+      <div className="app-panel-head">
+        <h2 className="app-panel-title">Workspaces</h2>
+        <span className="app-meta">
+          {workspaces.length} · sorted by {SORTS.find(s => s.id === sort).label.toLowerCase()}
+        </span>
 
-        <div className="dsh-panel-actions">
+        <div className="app-panel-actions" ref={actionsRef}>
           <button
-            className={`dsh-iconbtn${menuOpen ? ' is-on' : ''}`}
+            className={`ui-iconbtn${menuOpen ? ' is-on' : ''}`}
             onClick={() => setMenuOpen(o => !o)}
             aria-label="Sort workspaces"
             aria-expanded={menuOpen}
           >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-              strokeWidth="1.8" strokeLinecap="round">
-              <path d="M4 7h16" /><path d="M7 12h10" /><path d="M10 17h4" />
-            </svg>
+            <SortIcon />
           </button>
 
-          <button className="dsh-cta" onClick={onCreateWorkspace}>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-              strokeWidth="2.4" strokeLinecap="round"><path d="M12 5v14" /><path d="M5 12h14" /></svg>
-            <span className="dsh-cta-text">New workspace</span>
+          <button className="ui-btn" onClick={onCreateWorkspace}>
+            <PlusIcon size={12} />
+            New workspace
           </button>
 
           {menuOpen && (
-            <div className="dsh-menu" role="menu">
+            <div className="ui-menu" role="menu">
               {SORTS.map(s => (
                 <button
                   key={s.id}
                   role="menuitem"
                   className={sort === s.id ? 'is-on' : undefined}
-                  onClick={() => { setSort(s.id); setMenuOpen(false) }}
+                  onClick={() => { setSort(s.id); closeMenu() }}
                 >
                   {s.label}{sort === s.id && <span>✓</span>}
                 </button>
@@ -77,37 +80,40 @@ export default function WorkspaceList({ workspaces, onOpenWorkspace, onCreateWor
               <th>Teams</th>
               <th>Boards</th>
               <th>Members</th>
-              <th>Your Role</th>
+              <th>Your role</th>
             </tr>
           </thead>
           <tbody>
             {rows.length === 0 && (
-              <tr><td className="dsh-empty" colSpan={5}>You aren't in any workspace yet.</td></tr>
+              <tr><td className="ui-empty" colSpan={5}>You aren't in any workspace yet.</td></tr>
             )}
             {rows.map((ws) => {
-              const shown = ws.members.slice(0, 3)
+              const shown = ws.members.slice(0, MAX_SHOWN)
               const extra = ws.members.length - shown.length
               return (
                 <tr key={ws.workspaceId} onClick={() => onOpenWorkspace?.(ws)}>
                   <td>
-                    <div className="dsh-ws-cell">
+                    <span className="dsh-ws-cell">
+                      <span className="app-ws-mark" style={{ '--c': colorFor(ws.name) }} aria-hidden="true">
+                        {ws.name.charAt(0).toUpperCase()}
+                      </span>
                       <span className="dsh-ws-name">{ws.name}</span>
-                    </div>
+                    </span>
                   </td>
                   <td>
-                    <div className="dsh-chiprow">
-                      {ws.teams.slice(0, 3).map(t => <span key={t.id} className="dsh-chip">{t.name}</span>)}
-                      {ws.teams.length > 3 && <span className="dsh-chip">+{ws.teams.length - 3}</span>}
-                    </div>
+                    <span className="dsh-chiprow">
+                      {ws.teams.slice(0, MAX_SHOWN).map(t => <span key={t.id} className="ui-chip">{t.name}</span>)}
+                      {ws.teams.length > MAX_SHOWN && <span className="ui-chip">+{ws.teams.length - MAX_SHOWN}</span>}
+                    </span>
                   </td>
-                  <td className="dsh-cell-text">{ws.boards.length} board{ws.boards.length === 1 ? '' : 's'}</td>
+                  <td className="dsh-cell-muted">{ws.boards.length} board{ws.boards.length === 1 ? '' : 's'}</td>
                   <td>
-                    <div className="dsh-stack">
-                      {shown.map(m => <span key={m}><Avatar name={m} size={28} /></span>)}
-                      {extra > 0 && <span className="dsh-more">+{extra}</span>}
-                    </div>
+                    <span className="ui-avatars">
+                      {shown.map(m => <Avatar key={m} name={m} size={20} />)}
+                      {extra > 0 && <span className="ui-avatar is-more" style={{ '--size': '20px' }}>+{extra}</span>}
+                    </span>
                   </td>
-                  <td><span className={`dsh-role ${ws.role}`}>{ws.role}</span></td>
+                  <td><span className="dsh-role">{ws.role.toLowerCase()}</span></td>
                 </tr>
               )
             })}

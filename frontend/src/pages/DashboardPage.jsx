@@ -1,29 +1,32 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import GlassShell from '../components/shell/GlassShell'
-import GlassTopbar from '../components/shell/GlassTopbar'
-import { Chevron, CloseIcon } from '../components/shell/icons'
+import AppShell from '../components/shell/AppShell'
+import PageHeader from '../components/shell/PageHeader'
+import SearchField from '../components/shell/SearchField'
+import { BoardIcon, Chevron, CheckIcon, CopyIcon, InviteIcon, WarnIcon } from '../components/shell/icons'
+import Modal from '../components/ui/Modal'
 import StatCards from '../components/dashboard/StatCards'
 import GraphView from '../components/dashboard/GraphView'
 import WorkspaceList from '../components/dashboard/WorkspaceList'
 import useScrollSpy from '../hooks/useScrollSpy'
 import { getDashboard, relativeTime } from '../api/dashboardApi'
+import { boardProgress } from '../api/boardsApi'
 import './DashboardPage.css'
 
 /**
  * DashboardPage — the signed-in home.
  *
- * Frosted panels floating over a drifting aurora ground, sharing the
- * landing page's typography and blue. The shell it sits in comes from
- * GlassShell; only the stat tiles, graph and workspace table belong to
- * this page.
+ * A greeting, four numbers, the org graph and the workspace table, in
+ * one calm column. The sidebar's Graph view and Workspaces entries are
+ * sections of this page: clicking one scrolls here, and the sidebar
+ * highlight follows whichever section is on screen.
  */
 const SECTION_LABEL = {
   dashboard: 'Overview',
-  graph: 'Graph view',
+  graph: 'Graph',
   workspaces: 'Workspaces',
 }
 
-/** Rail destinations that are their own page rather than a section here. */
+/** Sidebar destinations that are their own page rather than a section here. */
 const OTHER_PAGES = ['boards', 'starred', 'teams']
 
 /** Breathing room left above a section once it is scrolled to. */
@@ -35,23 +38,12 @@ const COPIED_RESET_MS = 1600
 /** How long a toast lingers before dismissing itself. */
 const TOAST_MS = 2200
 
-const CopyIcon = ({ done }) => (
-  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-    strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-    {done
-      ? <path d="m5 13 4 4L19 7" />
-      : <><rect x="9" y="9" width="11" height="11" rx="2" /><path d="M5 15V5a2 2 0 0 1 2-2h10" /></>}
-  </svg>
-)
-
-const InviteIcon = () => (
-  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-    strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-    <path d="M16 20v-1.5a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4V20" />
-    <path d="M9 10.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7z" />
-    <path d="M19 8v6" /><path d="M22 11h-6" />
-  </svg>
-)
+function greeting(date = new Date()) {
+  const h = date.getHours()
+  if (h < 12) return 'Good morning'
+  if (h < 18) return 'Good afternoon'
+  return 'Good evening'
+}
 
 export default function DashboardPage({
   user,
@@ -74,8 +66,8 @@ export default function DashboardPage({
   const listRef = useRef(null)
   const scrollRef = useRef(null)
 
-  // The rail highlight follows the scroll position rather than the last
-  // click, so it always names the section actually on screen.
+  // The sidebar highlight follows the scroll position rather than the
+  // last click, so it always names the section actually on screen.
   const sections = useMemo(() => [
     { id: 'dashboard', ref: statsRef },
     { id: 'graph', ref: graphRef },
@@ -118,9 +110,8 @@ export default function DashboardPage({
    * Scrolls a section into view inside the content column only.
    *
    * `scrollIntoView` would walk up and scroll every scrollable ancestor,
-   * including the `.dash` shell — which shunts the sidebar off-screen and
-   * reads as the layout glitching. Measuring against the scroll container
-   * keeps the rail locked in place.
+   * shunting the sidebar off-screen. Measuring against the scroll
+   * container keeps the rest of the shell in place.
    */
   const scrollToSection = (target) => {
     const container = scrollRef.current
@@ -136,7 +127,7 @@ export default function DashboardPage({
   }
 
   /**
-   * A section the rail asked for from another page.
+   * A section the sidebar asked for from another page.
    *
    * It can only be scrolled to once the loaded markup is mounted, so this
    * waits for the data, then tells App it has been honoured — otherwise
@@ -150,8 +141,8 @@ export default function DashboardPage({
   }, [initialSection, loading, data])
 
   const navigate = (id) => {
-    // No setNav here — scrolling drives the highlight, so the rail and the
-    // content can never disagree about where you are.
+    // No highlight is set here — scrolling drives it, so the sidebar and
+    // the content can never disagree about where you are.
     if (id === 'graph') return scrollToSection(graphRef.current)
     if (id === 'workspaces') return scrollToSection(listRef.current)
     if (id === 'dashboard') return scrollToSection(null)
@@ -160,6 +151,7 @@ export default function DashboardPage({
   }
 
   const openWorkspace = useCallback((ws) => setOpenWs(ws), [])
+  const closeWorkspace = useCallback(() => setOpenWs(null), [])
 
   const workspaces = data?.workspaces ?? []
 
@@ -176,89 +168,33 @@ export default function DashboardPage({
   const stats = useMemo(() => {
     if (!data) return null
     const s = data.stats
-    return {
-      ...s,
-      lastVisitedLabel: relativeTime(s.lastVisitedBoard?.at),
-    }
+    return { ...s, lastVisitedLabel: relativeTime(s.lastVisitedBoard?.at) }
   }, [data])
 
-  const rail = {
-    active: nav,
-    collapsed,
-    user,
-    onNavigate: navigate,
-    onSignOut,
-  }
+  const firstName = (user?.name || 'there').split(' ')[0]
 
-  if (loading || !data) {
-    return (
-      <GlassShell {...rail} onNavigate={() => {}}>
-        <div className="dsh-main">
-          <div className="dsh-center">
-            {loading
-              ? <><div className="dsh-spinner" /><span>Loading your workspaces…</span></>
-              : <><span style={{ fontSize: 26 }}>⚠️</span><span>Couldn't load your dashboard.</span></>}
-          </div>
+  const body = (() => {
+    if (loading) {
+      return <div className="ui-state"><div className="ui-spinner" /><span>Loading your workspaces…</span></div>
+    }
+    if (!data) {
+      return (
+        <div className="ui-state">
+          <span className="ui-state-icon is-warn"><WarnIcon size={18} /></span>
+          <span className="ui-state-title">Couldn't load your dashboard.</span>
         </div>
-      </GlassShell>
-    )
-  }
-
-  return (
-    <GlassShell {...rail}>
-      <div className="dsh-main">
-        <GlassTopbar
-          scrollRef={scrollRef}
-          ready={!loading && !!data}
-          collapsed={collapsed}
-          onToggleCollapse={() => setCollapsed(c => !c)}
-          query={query}
-          onQueryChange={setQuery}
-          searchPlaceholder="Search workspaces, teams, boards…"
-          user={user}
-        >
-          <div className="dsh-invite">
-            <span className="dsh-invite-text" title={inviteLink}>{inviteLink}</span>
-            <button
-              className={`dsh-copybtn${copied ? ' is-done' : ''}`}
-              onClick={copyInvite}
-              aria-label="Copy invite link"
-              title="Copy invite link"
-            >
-              <CopyIcon done={copied} />
-            </button>
-          </div>
-
-          <button
-            className="dsh-cta"
-            onClick={async () => {
-              // Only claim success once the clipboard actually took it.
-              if (await copyInvite()) setToast('Invite link copied to your clipboard')
-            }}
-          >
-            <span className="dsh-cta-text">Invite</span>
-            <InviteIcon />
-          </button>
-        </GlassTopbar>
-
-        {/* ── Content ── */}
-        <div className="dsh-scroll" ref={scrollRef}>
-          <div className="dsh-crumbbar dsh-glass dsh-in">
-            <div>
-              <h1 className="dsh-pagetitle">
-                {(user?.name || 'there').split(' ')[0]}'s dashboard
-              </h1>
-            </div>
-            <nav className="dsh-crumbs" aria-label="Breadcrumb">
-              <span>Home</span><Chevron />
-              <span>Dashboard</span><Chevron />
-              <span className="dsh-crumb-now">{SECTION_LABEL[nav] || 'Overview'}</span>
-            </nav>
-          </div>
+      )
+    }
+    return (
+      <div className="app-scroll" ref={scrollRef}>
+        <div className="app-content">
+          <header className="ui-in">
+            <h1 className="app-title">{greeting()}, {firstName}</h1>
+            <p className="app-subtitle">Here's where your workspaces stand.</p>
+          </header>
 
           {!data.live && (
-            <div className="dsh-banner dsh-in" style={{ '--in': '60ms' }}>
-              <span>◇</span>
+            <div className="ui-banner">
               Showing sample data — couldn't reach <code>GET /workspace/mine</code>.
             </div>
           )}
@@ -273,11 +209,7 @@ export default function DashboardPage({
           </div>
 
           <div ref={graphRef}>
-            <GraphView
-              workspaces={filtered}
-              userName={user?.name}
-              onSelectWorkspace={openWorkspace}
-            />
+            <GraphView workspaces={filtered} userName={user?.name} onSelectWorkspace={openWorkspace} />
           </div>
 
           <div ref={listRef}>
@@ -289,39 +221,78 @@ export default function DashboardPage({
           </div>
         </div>
       </div>
+    )
+  })()
 
-      {/* ── Boards drawer ── */}
+  return (
+    <AppShell
+      active={nav}
+      collapsed={collapsed}
+      user={user}
+      workspaces={workspaces}
+      onNavigate={navigate}
+      onOpenBoard={onOpenBoard}
+      onSignOut={onSignOut}
+    >
+      <PageHeader
+        crumbs={['Dashboard', SECTION_LABEL[nav] || 'Overview']}
+        collapsed={collapsed}
+        onToggleCollapse={() => setCollapsed(c => !c)}
+      >
+        <SearchField
+          value={query}
+          onChange={setQuery}
+          placeholder="Search workspaces, teams, boards…"
+          label="Search"
+          hotkey
+        />
+        <button className="ui-iconbtn" onClick={copyInvite} aria-label="Copy invite link" title={inviteLink}>
+          {copied ? <CheckIcon size={15} /> : <CopyIcon size={15} />}
+        </button>
+        <button
+          className="ui-btn is-primary"
+          onClick={async () => {
+            // Only claim success once the clipboard actually took it.
+            if (await copyInvite()) setToast('Invite link copied to your clipboard')
+          }}
+        >
+          <InviteIcon size={14} />
+          Invite
+        </button>
+      </PageHeader>
+
+      {body}
+
       {openWs && (
-        <div className="dsh-overlay" onClick={() => setOpenWs(null)}>
-          <div className="dsh-drawer" onClick={e => e.stopPropagation()} role="dialog" aria-modal="true">
-            <div className="dsh-drawer-head">
-              <div className="dsh-drawer-title">{openWs.name}</div>
-              <button className="dsh-iconbtn" onClick={() => setOpenWs(null)} aria-label="Close">
-                <CloseIcon />
-              </button>
-            </div>
-            <div className="dsh-drawer-sub">
-              {openWs.teams.length} teams · {openWs.members.length} members · you are {openWs.role.toLowerCase()}
-            </div>
-            {openWs.boards.map(b => (
-              <button
-                key={b.boardId}
-                className="dsh-boardrow"
-                onClick={() => { setOpenWs(null); onOpenBoard?.(b.boardId, openWs) }}
-              >
-                <span className="dsh-boardmark">⊞</span>
-                <span style={{ flex: 1 }}>
+        <Modal
+          title={openWs.name}
+          kicker={`${openWs.teams.length} teams · ${openWs.members.length} members · you are ${openWs.role.toLowerCase()}`}
+          onClose={closeWorkspace}
+        >
+          <div className="dsh-boardlist">
+            {openWs.boards.length === 0 && <div className="ui-empty">No boards in this workspace yet.</div>}
+            {openWs.boards.map(b => {
+              const progress = boardProgress(b)
+              return (
+                <button
+                  key={b.boardId}
+                  className="dsh-boardrow"
+                  onClick={() => { closeWorkspace(); onOpenBoard?.(b.boardId, openWs) }}
+                >
+                  <BoardIcon size={15} />
                   <span className="dsh-boardname">{b.name}</span>
-                  <span className="dsh-boardmeta">{b.done}/{b.cards} cards done</span>
-                </span>
-                <Chevron />
-              </button>
-            ))}
+                  <span className="dsh-boardmeta">
+                    {progress.known ? `${progress.done}/${progress.total} done` : ''}
+                  </span>
+                  <Chevron size={12} />
+                </button>
+              )
+            })}
           </div>
-        </div>
+        </Modal>
       )}
 
-      {toast && <div className="dsh-toast">{toast}</div>}
-    </GlassShell>
+      {toast && <div className="ui-toast" role="status">{toast}</div>}
+    </AppShell>
   )
 }
