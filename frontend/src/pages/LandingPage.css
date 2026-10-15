@@ -1,633 +1,389 @@
 /* ══════════════════════════════════════════════════════════════
-   Landing page — light marketing surface.
-   Deliberately themed independently of the (dark) app shell, so
-   every token here is namespaced under .lp and never leaks out.
+   Landing — flat and quiet, with motion doing the work.
+
+   No glass, no blur, no stickers: white ground, the app's own type
+   and greys, and one live board preview whose card travels from Todo
+   to Done on a loop. Every animation is transform/opacity only, and
+   the global reduced-motion rule in index.css collapses each one to
+   its resting state.
    ═════════════════════════════════════════════════════════════ */
 
 .lp {
-  --ink:        #0A0A0F;
-  --ink-2:      #3C4043;
-  --ink-3:      #5F6368;
-  --ink-4:      #9AA0A6;
-  --line:       #E8EAED;
-  --paper:      #FFFFFF;
-  --ground:     #FAFAFA;
-  --stage:      #F4F4F5;
-  --blue:       #2E6BF6;
-  --blue-dark:  #1A54DC;
-  --blue-soft:  #E8F0FE;
-
-  --font:     'Figtree', 'Inter', system-ui, -apple-system, sans-serif;
-  --display:  'Outfit', 'Figtree', system-ui, sans-serif;
-  --hand:     'Caveat', 'Segoe Script', cursive;
-
-  /* Realistic depth: light falls off across four stacked layers
-     rather than one flat blur. */
-  --lift-1:
-    0 1px 2px rgba(16, 24, 40, 0.05),
-    0 3px 6px rgba(16, 24, 40, 0.04);
-  --lift-2:
-    0 1px 2px rgba(16, 24, 40, 0.04),
-    0 4px 8px rgba(16, 24, 40, 0.04),
-    0 10px 20px rgba(16, 24, 40, 0.05);
-  --lift-3:
-    0 1px 2px rgba(16, 24, 40, 0.04),
-    0 6px 12px rgba(16, 24, 40, 0.05),
-    0 16px 32px rgba(16, 24, 40, 0.06),
-    0 32px 56px rgba(16, 24, 40, 0.05);
-
   position: relative;
   min-height: 100%;
-  background: var(--ground);
-  color: var(--ink);
-  font-family: var(--font);
-  -webkit-font-smoothing: antialiased;
+  background: var(--bg-surface);
+  color: var(--text-1);
   overflow-x: hidden;
 }
+.lp-sentinel { position: absolute; top: 0; width: 1px; height: 1px; }
 
-.lp *,
-.lp *::before,
-.lp *::after { box-sizing: border-box; }
-
-/* ── Navigation ─────────────────────────────────────────────── */
+/* ── Nav ────────────────────────────────────────────────────── */
 .lp-nav {
   position: sticky;
   top: 0;
-  z-index: 60;
+  z-index: 20;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 24px;
-  padding: 16px 30px;
-  background: rgba(250, 250, 250, 0.72);
-  backdrop-filter: saturate(180%) blur(14px);
-  -webkit-backdrop-filter: saturate(180%) blur(14px);
+  height: 60px;
+  padding: 0 max(24px, calc((100% - 1120px) / 2));
   border-bottom: 1px solid transparent;
-  transition: border-color 240ms ease, background 240ms ease;
+  transition: background var(--dur-2), border-color var(--dur-2);
 }
-.lp-nav.is-stuck {
-  border-bottom-color: var(--line);
-  background: rgba(255, 255, 255, 0.86);
-}
+.lp-nav.is-stuck { background: var(--bg-surface); border-bottom-color: var(--line); }
+.lp-nav-right { display: flex; gap: 8px; }
 
 .lp-brand {
-  display: flex;
-  align-items: center;
-  gap: 11px;
-  font-family: var(--display);
-  font-size: 21px;
-  font-weight: 600;
-  letter-spacing: -0.02em;
-  color: var(--ink);
-  user-select: none;
-}
-
-.lp-nav-links {
-  display: flex;
+  display: inline-flex;
   align-items: center;
   gap: 8px;
+  font-size: var(--fs-14);
+  font-weight: 600;
+  letter-spacing: -0.01em;
 }
-.lp-nav-link {
-  position: relative;
-  padding: 8px 14px;
-  border: none;
-  background: none;
-  font-family: inherit;
-  font-size: 15px;
-  font-weight: 450;
-  color: var(--ink-2);
-  cursor: pointer;
-  border-radius: 8px;
-  transition: color 160ms ease, background 160ms ease;
-}
-.lp-nav-link:hover { color: var(--ink); background: rgba(10, 10, 15, 0.045); }
 
-.lp-nav-right { display: flex; align-items: center; gap: 6px; }
-
-.lp-signin {
-  padding: 9px 14px;
-  border: none;
-  background: none;
-  font-family: inherit;
-  font-size: 15px;
-  font-weight: 500;
-  color: var(--ink);
-  cursor: pointer;
-  border-radius: 8px;
-  transition: background 160ms ease;
-}
-.lp-signin:hover { background: rgba(10, 10, 15, 0.045); }
-
-.lp-ghost-btn {
-  padding: 10px 20px;
-  border: 1px solid #D6D8DC;
-  border-radius: 10px;
-  background: var(--paper);
-  font-family: inherit;
-  font-size: 15px;
-  font-weight: 550;
-  color: var(--ink);
-  cursor: pointer;
-  box-shadow: var(--lift-1);
-  transition: transform 160ms cubic-bezier(.2,.8,.3,1),
-              box-shadow 160ms ease, border-color 160ms ease;
-}
-.lp-ghost-btn:hover {
-  transform: translateY(-1px);
-  border-color: #C3C6CB;
-  box-shadow: var(--lift-2);
-}
-.lp-ghost-btn:active { transform: translateY(0); }
-
-/* ── Hero stage ─────────────────────────────────────────────── */
+/* ── Hero ───────────────────────────────────────────────────── */
 .lp-hero {
   position: relative;
-  margin: 8px 14px 0;
-  padding: 132px 24px 164px;
-  border-radius: 26px;
   display: flex;
+  flex-direction: column;
   align-items: center;
-  min-height: min(880px, 86vh);
-  background: var(--stage);
-  overflow: hidden;
-  isolation: isolate;
+  padding: 72px 24px 0;
+  text-align: center;
 }
-
-/* Halftone ground. Two offset dot grids give the print-like
-   texture in the reference instead of a flat single grid. */
-.lp-halftone {
-  position: absolute;
-  inset: 0;
-  z-index: 0;
-  background-image:
-    radial-gradient(circle at center, rgba(10, 10, 15, 0.115) 1.15px, transparent 1.35px),
-    radial-gradient(circle at center, rgba(10, 10, 15, 0.055) 1px, transparent 1.2px);
-  background-size: 15px 15px, 15px 15px;
-  background-position: 0 0, 7.5px 7.5px;
-  -webkit-mask-image: radial-gradient(ellipse 96% 90% at 50% 45%, #000 62%, transparent 100%);
-          mask-image: radial-gradient(ellipse 96% 90% at 50% 45%, #000 62%, transparent 100%);
-}
-
-/* Soft light pooling behind the headline */
-.lp-hero::after {
+/* A faint dot grid that fades out downward — texture, not decoration. */
+.lp-hero::before {
   content: '';
   position: absolute;
-  left: 50%;
-  top: 22%;
-  width: min(900px, 85%);
-  height: 460px;
-  transform: translateX(-50%);
-  background: radial-gradient(ellipse at center, rgba(255, 255, 255, 0.9), rgba(255, 255, 255, 0) 68%);
+  inset: -60px 0 30% 0;
+  z-index: 0;
+  background-image: radial-gradient(circle, #E4E4E7 1px, transparent 1px);
+  background-size: 22px 22px;
+  -webkit-mask-image: radial-gradient(ellipse 60% 60% at 50% 30%, #000 30%, transparent 75%);
+  mask-image: radial-gradient(ellipse 60% 60% at 50% 30%, #000 30%, transparent 75%);
   pointer-events: none;
-  z-index: 1;
 }
+.lp-hero > * { position: relative; z-index: 1; }
 
-.lp-hero-inner {
-  position: relative;
-  z-index: 3;
-  width: 100%;
-  max-width: 900px;
-  margin: 0 auto;
-  text-align: center;
+.lp-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 28px;
+  padding: 0 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-full);
+  background: var(--bg-surface);
+  color: var(--text-2);
+  font-size: var(--fs-12);
+  font-weight: 500;
+  box-shadow: var(--shadow-card);
+}
+.lp-pill-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--success);
+  box-shadow: 0 0 0 0 rgba(46, 165, 108, 0.5);
+  animation: lp-ping 2.2s ease-out infinite;
+}
+@keyframes lp-ping {
+  0%   { box-shadow: 0 0 0 0 rgba(46, 165, 108, 0.45); }
+  70%  { box-shadow: 0 0 0 6px rgba(46, 165, 108, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(46, 165, 108, 0); }
 }
 
 .lp-h1 {
-  margin: 0;
-  font-family: var(--display);
-  /* Tracks viewport width the way the reference does (~4.4% of it),
-     which is what keeps the flanking art clear of the text. */
-  font-size: clamp(36px, 4.8vw, 84px);
+  margin-top: 24px;
+  font-size: clamp(40px, 6.4vw, 68px);
+  font-weight: 600;
   line-height: 1.04;
-  font-weight: 500;
   letter-spacing: -0.035em;
-  color: var(--ink);
 }
-.lp-h1 .lp-h1-dim { color: #A2A6AB; }
+.lp-line { display: block; }
+.lp-line.is-dim { color: var(--text-4); }
+
+/* Each word rises from behind its own mask. */
+.lp-word {
+  display: inline-block;
+  overflow: hidden;
+  margin-right: 0.24em;
+  padding-bottom: 0.08em;
+  vertical-align: top;
+}
+.lp-word:last-child { margin-right: 0; }
+.lp-word > span {
+  display: inline-block;
+  transform: translateY(108%);
+  animation: lp-word-in 760ms var(--ease-out) forwards;
+  animation-delay: var(--in, 0ms);
+}
+@keyframes lp-word-in { to { transform: none; } }
 
 .lp-sub {
-  margin: 30px auto 0;
   max-width: 460px;
-  font-size: clamp(15px, 1.5vw, 18px);
+  margin-top: 20px;
+  font-size: var(--fs-16);
   line-height: 1.55;
-  font-weight: 400;
-  color: var(--ink-2);
+  color: var(--text-3);
 }
 
 .lp-cta-row {
-  margin-top: 38px;
   display: flex;
   justify-content: center;
-  gap: 12px;
-  flex-wrap: wrap;
-}
-
-.lp-cta {
-  position: relative;
-  padding: 15px 32px;
-  border: none;
-  border-radius: 12px;
-  background: var(--blue);
-  font-family: inherit;
-  font-size: 16px;
-  font-weight: 600;
-  color: #fff;
-  cursor: pointer;
-  overflow: hidden;
-  box-shadow:
-    0 1px 2px rgba(46, 107, 246, 0.30),
-    0 6px 16px rgba(46, 107, 246, 0.28),
-    0 14px 30px rgba(46, 107, 246, 0.18);
-  transition: transform 180ms cubic-bezier(.2,.8,.3,1),
-              box-shadow 180ms ease, background 180ms ease;
-}
-.lp-cta:hover {
-  background: var(--blue-dark);
-  transform: translateY(-2px);
-  box-shadow:
-    0 2px 4px rgba(46, 107, 246, 0.30),
-    0 10px 24px rgba(46, 107, 246, 0.34),
-    0 20px 44px rgba(46, 107, 246, 0.22);
-}
-.lp-cta:active { transform: translateY(0); }
-
-/* Sheen sweeps across the button on hover */
-.lp-cta::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(105deg, transparent 30%, rgba(255,255,255,0.38) 48%, transparent 66%);
-  transform: translateX(-120%);
-  transition: transform 0s;
-}
-.lp-cta:hover::after { transform: translateX(120%); transition: transform 720ms ease; }
-
-.lp-cta-note {
-  margin-top: 18px;
-  font-size: 13.5px;
-  font-weight: 500;
-  color: var(--ink-3);
-}
-
-/* ── Centre logo mark ───────────────────────────────────────── */
-.lp-mark {
-  width: 84px;
-  height: 84px;
-  margin: 0 auto 44px;
-  border-radius: 22px;
-  background: linear-gradient(150deg, #FFFFFF 0%, #F0F1F3 100%);
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 9px;
-  place-content: center;
-  padding: 22px;
-  box-shadow:
-    0 1px 2px rgba(16, 24, 40, 0.06),
-    0 8px 16px rgba(16, 24, 40, 0.08),
-    0 20px 40px rgba(16, 24, 40, 0.10),
-    inset 0 1.5px 0 rgba(255, 255, 255, 0.9),
-    inset 0 -2px 5px rgba(16, 24, 40, 0.05);
-}
-.lp-mark i {
-  width: 14px;
-  height: 14px;
-  border-radius: 50%;
-  background: #1F1F24;
-  display: block;
-}
-.lp-mark i:first-child { background: #4FA3F7; }
-
-/* ══ Floating art ═══════════════════════════════════════════ */
-.lp-art {
-  position: absolute;
-  inset: 0;
-  z-index: 2;
-  pointer-events: none;
-}
-
-/* Parallax shell — reads --px/--py written by the hero pointer
-   handler; --d is the element's depth in px. */
-.lp-par {
-  position: absolute;
-  will-change: transform;
-  transform: translate3d(
-    calc(var(--px, 0) * var(--d, 10) * 1px),
-    calc(var(--py, 0) * var(--d, 10) * 1px), 0);
-}
-
-/* Inner bob — separated from .lp-par so the two transforms
-   never fight each other. */
-.lp-bob {
-  animation: lp-bob var(--dur, 9s) ease-in-out infinite;
-  animation-delay: var(--delay, 0s);
-  will-change: transform;
-}
-@keyframes lp-bob {
-  0%, 100% {
-    transform: translateY(0) rotate(var(--rot, 0deg)) scale(var(--as, 1));
-  }
-  50% {
-    transform: translateY(-13px)
-               rotate(calc(var(--rot, 0deg) + var(--rot-sway, 0.9deg)))
-               scale(var(--as, 1));
-  }
-}
-
-/* Sweeping second hand — 60 discrete steps, like a real movement. */
-.lp-second-hand {
-  transform-box: view-box;
-  transform-origin: 50px 55px;
-  animation: lp-sweep 60s steps(60, end) infinite;
-}
-@keyframes lp-sweep { to { transform: rotate(360deg); } }
-
-/* Entrance: art settles in from slightly off-position */
-.lp-drop {
-  opacity: 0;
-  animation: lp-drop 1000ms cubic-bezier(.16,.84,.34,1) forwards;
-  animation-delay: var(--in, 200ms);
-}
-@keyframes lp-drop {
-  from { opacity: 0; transform: translateY(26px) scale(0.94); }
-  to   { opacity: 1; transform: translateY(0)    scale(1); }
-}
-
-/* ── Paper & folders ────────────────────────────────────────── */
-.lp-paper {
-  position: relative;
-  background: var(--paper);
-  border-radius: 16px;
-  box-shadow: var(--lift-3);
-}
-/* File-folder tab */
-.lp-paper.has-tab::before {
-  content: '';
-  position: absolute;
-  top: -13px;
-  left: 0;
-  width: 46%;
-  height: 16px;
-  background: var(--paper);
-  border-radius: 12px 12px 0 0;
-  box-shadow: 0 -1px 2px rgba(16, 24, 40, 0.04);
-}
-
-/* ── Sticky note ────────────────────────────────────────────── */
-.lp-note {
-  width: 250px;
-  padding: 34px 26px 30px;
-  border-radius: 3px;
-  font-family: var(--hand);
-  font-size: 22px;
-  line-height: 1.34;
-  color: #43391A;
-  /* Paper isn't a flat fill: the sheet catches light at the top
-     and the adhesive strip darkens the upper band. */
-  background:
-    linear-gradient(178deg, rgba(0,0,0,0.05) 0 14%, rgba(0,0,0,0) 26%),
-    linear-gradient(160deg, #FCEE7E 0%, #F9E36A 46%, #F3D95A 100%);
-  box-shadow:
-    0 1px 2px rgba(16, 24, 40, 0.10),
-    0 8px 16px rgba(16, 24, 40, 0.10),
-    0 20px 34px rgba(16, 24, 40, 0.10);
-}
-/* Bottom-right corner lifting off the surface — soft falloff, no
-   hard square edge. */
-.lp-note::after {
-  content: '';
-  position: absolute;
-  right: 0;
-  bottom: 0;
-  width: 68px;
-  height: 68px;
-  background: radial-gradient(circle at 100% 100%, rgba(90, 70, 10, 0.13), rgba(90, 70, 10, 0) 72%);
-  border-bottom-right-radius: 3px;
-  pointer-events: none;
-}
-
-.lp-pin {
-  position: absolute;
-  top: -13px;
-  left: 50%;
-  transform: translateX(-50%);
-  filter: drop-shadow(0 3px 3px rgba(16, 24, 40, 0.30));
-}
-
-/* ── Soft 3D tile (icons) ───────────────────────────────────── */
-.lp-tile {
-  display: grid;
-  place-items: center;
-  border-radius: 26%;
-  background: linear-gradient(150deg, #FFFFFF 0%, #F1F2F4 100%);
-  box-shadow:
-    0 1px 2px rgba(16, 24, 40, 0.06),
-    0 6px 14px rgba(16, 24, 40, 0.09),
-    0 16px 30px rgba(16, 24, 40, 0.09),
-    inset 0 1.5px 0 rgba(255, 255, 255, 0.95),
-    inset 0 -2px 5px rgba(16, 24, 40, 0.05);
-}
-
-/* ── Mini card internals ────────────────────────────────────── */
-.lp-card-title {
-  font-family: var(--display);
-  font-size: 17px;
-  font-weight: 600;
-  letter-spacing: -0.02em;
-  color: var(--ink);
-}
-.lp-row {
-  display: flex;
-  align-items: center;
   gap: 10px;
+  margin-top: 28px;
 }
-.lp-chip {
-  flex: none;
-  width: 22px;
-  height: 22px;
-  border-radius: 6px;
-  display: grid;
-  place-items: center;
-  font-size: 11.5px;
-  font-weight: 700;
-  color: #fff;
-}
-.lp-task-name {
-  font-size: 13.5px;
-  font-weight: 550;
-  color: var(--ink);
-  white-space: nowrap;
-}
-.lp-stack { display: flex; margin-left: auto; }
-.lp-stack > * { margin-left: -8px; border-radius: 50%; box-shadow: 0 0 0 2.5px #fff; }
-.lp-stack > *:first-child { margin-left: 0; }
+.lp-cta { height: 38px; padding: 0 16px; font-size: var(--fs-14); }
 
-.lp-meter {
-  height: 6px;
-  flex: 1;
-  border-radius: 99px;
-  background: #E9EAEC;
-  overflow: hidden;
+.lp-fade {
+  opacity: 0;
+  animation: lp-fade-up 700ms var(--ease-out) forwards;
+  animation-delay: var(--in, 0ms);
 }
-.lp-meter i {
-  display: block;
-  height: 100%;
-  border-radius: 99px;
-  width: 0;
-  background: var(--c, var(--blue));
-  transition: width 1400ms cubic-bezier(.2,.75,.3,1);
-  transition-delay: var(--md, 600ms);
-}
-.lp-hero.is-ready .lp-meter i { width: var(--w, 60%); }
-
-.lp-time-pill {
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  padding: 7px 13px;
-  border-radius: 9px;
-  background: var(--blue-soft);
-  font-size: 13px;
-  font-weight: 600;
-  color: #1552C9;
+@keyframes lp-fade-up {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: none; }
 }
 
-/* ── Sections below the fold ────────────────────────────────── */
-.lp-section { padding: 108px 30px; max-width: 1180px; margin: 0 auto; }
-
-.lp-eyebrow {
-  display: inline-block;
-  padding: 6px 13px;
-  border-radius: 99px;
-  background: var(--blue-soft);
-  font-size: 12.5px;
-  font-weight: 650;
-  letter-spacing: 0.02em;
-  color: #1552C9;
-  margin-bottom: 20px;
-}
-.lp-h2 {
-  margin: 0;
-  font-family: var(--display);
-  font-size: clamp(28px, 3.6vw, 46px);
-  line-height: 1.12;
-  font-weight: 500;
-  letter-spacing: -0.03em;
-  color: var(--ink);
-}
-.lp-lede {
-  margin: 18px 0 0;
-  max-width: 520px;
-  font-size: 17px;
-  line-height: 1.6;
-  color: var(--ink-3);
-}
-.lp-center { text-align: center; }
-.lp-center .lp-lede { margin-left: auto; margin-right: auto; }
-
-.lp-grid {
+/* ── Preview ────────────────────────────────────────────────── */
+.lp-stage {
+  width: min(760px, 100%);
   margin-top: 56px;
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 22px;
+  perspective: 1400px;
 }
-.lp-feature {
-  padding: 32px 28px 34px;
-  border: 1px solid var(--line);
-  border-radius: 20px;
-  background: var(--paper);
-  box-shadow: var(--lift-1);
-  transition: transform 260ms cubic-bezier(.2,.8,.3,1), box-shadow 260ms ease;
-}
-.lp-feature:hover { transform: translateY(-4px); box-shadow: var(--lift-3); }
-.lp-feature h3 {
-  margin: 22px 0 9px;
-  font-family: var(--display);
-  font-size: 19px;
-  font-weight: 600;
-  letter-spacing: -0.02em;
-}
-.lp-feature p { margin: 0; font-size: 14.5px; line-height: 1.65; color: var(--ink-3); }
-
-.lp-feat-icon {
-  width: 46px;
-  height: 46px;
-  border-radius: 13px;
-  display: grid;
-  place-items: center;
-  background: linear-gradient(150deg, #FFFFFF, #F1F2F4);
-  box-shadow: var(--lift-1), inset 0 1px 0 #fff;
+.lp-tilt {
+  transform:
+    rotateX(calc(var(--py, 0) * -3deg))
+    rotateY(calc(var(--px, 0) * 3deg));
+  transform-style: preserve-3d;
+  will-change: transform;
 }
 
-/* Closing band */
-.lp-band {
-  margin: 0 14px 14px;
-  padding: 92px 30px 96px;
-  border-radius: 26px;
-  background: var(--stage);
-  text-align: center;
-  position: relative;
+.lp-preview {
   overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: var(--bg-board);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04), 0 24px 60px -12px rgba(0, 0, 0, 0.12);
+  text-align: left;
 }
 
-.lp-foot {
+.lp-preview-bar {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 20px;
-  flex-wrap: wrap;
-  padding: 30px 34px 40px;
-  max-width: 1180px;
-  margin: 0 auto;
-  font-size: 14px;
-  color: var(--ink-4);
+  gap: 12px;
+  height: 40px;
+  padding: 0 14px;
+  border-bottom: 1px solid var(--line);
+  background: var(--bg-panel);
+  font-size: var(--fs-12);
+  color: var(--text-3);
+}
+.lp-preview-crumb i { font-style: normal; color: var(--text-4); margin: 0 4px; }
+.lp-preview-crumb b { font-weight: 500; color: var(--text-1); }
+.lp-preview-tabs { display: flex; gap: 4px; }
+.lp-preview-tabs span {
+  padding: 2px 8px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-xs);
+  background: var(--bg-surface);
+}
+.lp-preview-tabs .is-on { background: var(--bg-active); color: var(--text-1); }
+
+/* Geometry the traveller relies on: equal columns 12px apart, a 24px
+   header with an 8px gap beneath, and 62px card slots. */
+.lp-preview-board {
+  --gap: 12px;
+  --pad: 14px;
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--gap);
+  padding: var(--pad);
+  min-height: 260px;
 }
 
-/* ── Scroll reveal ──────────────────────────────────────────── */
+.lp-col-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 24px;
+  margin-bottom: 8px;
+  font-size: var(--fs-12);
+}
+.lp-col-head b { font-weight: 500; color: var(--text-1); }
+.lp-col-head span { color: var(--text-3); }
+
+.lp-slot,
+.lp-card {
+  height: 62px;
+  margin-bottom: 8px;
+  border-radius: var(--radius-md);
+}
+.lp-slot { border: 1px dashed var(--line-strong); }
+
+.lp-card {
+  padding: 9px 10px;
+  border: 1px solid var(--line);
+  background: var(--bg-surface);
+  box-shadow: var(--shadow-card);
+}
+.lp-card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 16px;
+  margin-bottom: 6px;
+  font-size: var(--fs-11);
+  color: var(--text-3);
+}
+.lp-card-top > svg { color: var(--text-4); }
+.lp-card-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-size: var(--fs-12);
+  font-weight: 500;
+  color: var(--text-1);
+}
+
+/* The travelling card: sits on Todo's slot, lifts, slides to In
+   Progress, rests, slides to Done, rests, fades and starts again. */
+.lp-traveller {
+  position: absolute;
+  top: calc(var(--pad) + 32px);
+  left: var(--pad);
+  z-index: 2;
+  width: calc((100% - 2 * var(--pad) - 2 * var(--gap)) / 3);
+  margin: 0;
+  animation: lp-travel 10s infinite;
+}
+@keyframes lp-travel {
+  0%   { opacity: 0; transform: none; }
+  4%   { opacity: 1; transform: none; box-shadow: var(--shadow-card); }
+  14%  { transform: none; box-shadow: var(--shadow-card); animation-timing-function: var(--ease-out); }
+  18%  { transform: translateY(-4px) scale(1.03); box-shadow: var(--shadow-drag); animation-timing-function: cubic-bezier(0.65, 0, 0.35, 1); }
+  32%  { transform: translate(calc(100% + 12px), -4px) scale(1.03); box-shadow: var(--shadow-drag); }
+  36%  { transform: translate(calc(100% + 12px), 0); box-shadow: var(--shadow-card); }
+  54%  { transform: translate(calc(100% + 12px), 0); box-shadow: var(--shadow-card); animation-timing-function: var(--ease-out); }
+  58%  { transform: translate(calc(100% + 12px), -4px) scale(1.03); box-shadow: var(--shadow-drag); animation-timing-function: cubic-bezier(0.65, 0, 0.35, 1); }
+  72%  { transform: translate(calc(200% + 24px), -4px) scale(1.03); box-shadow: var(--shadow-drag); }
+  76%  { transform: translate(calc(200% + 24px), 0); box-shadow: var(--shadow-card); opacity: 1; }
+  93%  { transform: translate(calc(200% + 24px), 0); opacity: 1; }
+  97%, 100% { transform: translate(calc(200% + 24px), 0); opacity: 0; }
+}
+
+/* Its status mark changes as it lands in each column. */
+.lp-traveller-status { position: relative; display: inline-block; width: 12px; height: 12px; flex-shrink: 0; }
+.lp-traveller-status .ui-status { position: absolute; inset: 0; }
+.lp-traveller-status .is-started,
+.lp-traveller-status .is-done { opacity: 0; }
+.lp-traveller-status .is-todo    { animation: lp-st-todo 10s infinite; }
+.lp-traveller-status .is-started { animation: lp-st-started 10s infinite; }
+.lp-traveller-status .is-done    { animation: lp-st-done 10s infinite; }
+@keyframes lp-st-todo    { 0%, 33% { opacity: 1; } 36%, 100% { opacity: 0; } }
+@keyframes lp-st-started { 0%, 33% { opacity: 0; } 36%, 73% { opacity: 1; } 76%, 100% { opacity: 0; } }
+@keyframes lp-st-done    { 0%, 73% { opacity: 0; } 76%, 100% { opacity: 1; } }
+
+/* Someone picks it up while it is in progress. */
+.lp-traveller-who { display: inline-flex; opacity: 0; animation: lp-who 10s infinite; }
+@keyframes lp-who {
+  0%, 40% { opacity: 0; transform: scale(0.5); }
+  45%     { opacity: 1; transform: scale(1.12); }
+  48%, 95% { opacity: 1; transform: none; }
+  100%    { opacity: 0; }
+}
+
+.lp-stage.is-paused * { animation-play-state: paused; }
+
+/* ── Sections ───────────────────────────────────────────────── */
+.lp-section {
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 120px 24px 0;
+}
+.lp-center { max-width: 620px; margin: 0 auto; text-align: center; }
+
+.lp-h2 {
+  font-size: clamp(28px, 3.6vw, 40px);
+  font-weight: 600;
+  line-height: 1.12;
+  letter-spacing: -0.03em;
+}
+.lp-h2 .is-dim { color: var(--text-4); }
+
+.lp-lede {
+  max-width: 520px;
+  margin: 16px auto 0;
+  font-size: var(--fs-16);
+  line-height: 1.6;
+  color: var(--text-3);
+}
+
+.lp-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin-top: 56px;
+  border-top: 1px solid var(--line);
+}
+.lp-feature { padding: 28px 28px 8px 0; }
+.lp-feature + .lp-feature { padding-left: 28px; border-left: 1px solid var(--line); }
+.lp-feat-icon {
+  display: inline-grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  color: var(--text-1);
+  box-shadow: var(--shadow-card);
+}
+.lp-feature h3 { margin-top: 18px; font-size: var(--fs-14); font-weight: 600; }
+.lp-feature p { margin-top: 6px; font-size: var(--fs-13); line-height: 1.6; color: var(--text-3); }
+
+/* Icons draw themselves once their feature scrolls in. */
+.lp-draw {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  transition: stroke-dashoffset 1.1s var(--ease-out);
+  transition-delay: calc(var(--in, 0ms) + 250ms);
+}
+.lp-feature.is-in .lp-draw { stroke-dashoffset: 0; }
+
+.lp-closing { padding-bottom: 120px; text-align: center; }
+
+/* Scroll reveal. */
 .lp-rise {
   opacity: 0;
-  transform: translateY(22px);
-  transition: opacity 760ms cubic-bezier(.16,.84,.34,1),
-              transform 760ms cubic-bezier(.16,.84,.34,1);
+  transform: translateY(14px);
+  transition: opacity 700ms var(--ease-out), transform 700ms var(--ease-out);
   transition-delay: var(--in, 0ms);
 }
 .lp-rise.is-in { opacity: 1; transform: none; }
 
-/* ── Responsive ─────────────────────────────────────────────── */
-/* The full composition needs room on both flanks of the headline.
-   Step the art down before dropping it entirely. */
-@media (max-width: 1660px) { .lp-art { --as: 0.92; } }
-@media (max-width: 1500px) { .lp-art { --as: 0.86; } }
-@media (max-width: 1360px) { .lp-art { --as: 0.80; } }
-
-/* Below this the flanks can't clear the headline. Drop the art and
-   collapse the stage with it — a tall empty dot field looks unfinished. */
-@media (max-width: 1240px) {
-  .lp-art { display: none; }
-  .lp-hero {
-    min-height: 0;
-    padding: 92px 24px 104px;
-  }
+/* ── Footer ─────────────────────────────────────────────────── */
+.lp-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 24px;
+  border-top: 1px solid var(--line);
+  color: var(--text-3);
+  font-size: var(--fs-12);
 }
-@media (max-width: 900px) {
-  .lp-nav-links { display: none; }
+
+@media (max-width: 760px) {
+  .lp-hero { padding-top: 48px; }
+  .lp-preview-tabs { display: none; }
   .lp-grid { grid-template-columns: 1fr; }
-  .lp-section { padding: 76px 24px; }
-}
-@media (max-width: 560px) {
-  .lp-nav { padding: 14px 18px; }
-  .lp-signin { display: none; }
-  .lp-hero { margin: 6px 8px 0; padding: 62px 20px 70px; border-radius: 20px; min-height: 0; }
-  .lp-mark { width: 68px; height: 68px; padding: 18px; gap: 7px; margin-bottom: 32px; }
-  .lp-mark i { width: 12px; height: 12px; }
-  .lp-cta { width: 100%; }
-  .lp-band { padding: 66px 22px 70px; }
-}
-
-/* ── Reduced motion ─────────────────────────────────────────── */
-@media (prefers-reduced-motion: reduce) {
-  .lp-bob { animation: none; transform: rotate(var(--rot, 0deg)); }
-  .lp-drop { opacity: 1; animation: none; }
-  .lp-rise { opacity: 1; transform: none; transition: none; }
-  .lp-par { transform: none; }
-  .lp-cta::after { display: none; }
-  .lp-second-hand { animation: none !important; }
+  .lp-feature,
+  .lp-feature + .lp-feature { padding: 24px 0; border-left: none; border-bottom: 1px solid var(--line); }
+  .lp-section { padding-top: 80px; }
 }

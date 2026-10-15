@@ -228,6 +228,7 @@ button.app-crumb:hover { background: var(--bg-hover); color: var(--text-1); }
   margin-left: auto;
   min-width: 0;
 }
+.app-header-right .ui-search { width: 280px; }
 
 /* ── Tabs and toolbar rows ──────────────────────────────────── */
 .app-tabs,
