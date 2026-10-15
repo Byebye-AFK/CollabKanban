@@ -8,19 +8,18 @@
 // derivation are here.
 
 import { filterBy, sortBy } from './library'
+import { STATUS, columnStatus } from './boardStatus'
 
 /**
- * Column names treated as "finished" when deriving progress.
+ * A column counts as "finished" when its name reads as done — the same
+ * reading the board's status icons use (see ./boardStatus).
  *
- * Compared case-insensitively and never written back — column names
- * belong to whoever made the board. A board whose columns match none of
- * these simply reports `done: 0`, which the UI renders as a full ring of
- * outstanding work rather than as an error.
+ * Column names belong to whoever made the board and are never written
+ * back. A board whose columns match none simply reports `done: 0`,
+ * which the UI renders as outstanding work rather than as an error.
  */
-const DONE_COLUMN_NAMES = ['done', 'complete', 'completed', 'shipped']
-
 function isDoneColumn(column) {
-  return DONE_COLUMN_NAMES.includes((column?.name || '').trim().toLowerCase())
+  return columnStatus(column?.name) === STATUS.DONE
 }
 
 function countCards(column) {
