@@ -1,7 +1,13 @@
 import React, { useEffect, useRef, useState } from 'react'
-import GlassModal from './board/GlassModal'
+import Modal from './ui/Modal'
+import { StatusIcon } from './shell/icons'
+import { columnStatus } from '../api/boardStatus'
 
-const SUGGESTIONS = ['To do', 'In progress', 'In review', 'Blocked', 'Done']
+/**
+ * Suggested names, one per status, so a new board picks up the right
+ * status icons and its Active / Backlog views work from the start.
+ */
+const SUGGESTIONS = ['Backlog', 'Todo', 'In Progress', 'In Review', 'Done', 'Canceled']
 
 export default function CreateColumnModal({ onSubmit, onClose }) {
   const [name, setName] = useState('')
@@ -27,47 +33,48 @@ export default function CreateColumnModal({ onSubmit, onClose }) {
   const disabled = !name.trim() || submitting
 
   return (
-    <GlassModal
+    <Modal
       title="New column"
       onClose={onClose}
       footer={
         <>
-          <span className="brd-hint">Enter to create</span>
-          <button className="brd-btn-ghost" onClick={onClose}>Cancel</button>
-          <button className="brd-btn" onClick={handleSubmit} disabled={disabled}>
+          <span className="ui-hint">↵ to create</span>
+          <button className="ui-btn is-ghost" onClick={onClose}>Cancel</button>
+          <button className="ui-btn is-primary" onClick={handleSubmit} disabled={disabled}>
             {submitting ? 'Creating…' : 'Create column'}
           </button>
         </>
       }
     >
-      <div className="brd-field">
-        <label className="brd-label" htmlFor="brd-col-name">Column name</label>
+      <div className="ui-field">
+        <label className="ui-label" htmlFor="column-name">Column name</label>
         <input
-          id="brd-col-name"
+          id="column-name"
           ref={inputRef}
-          className="brd-input"
+          className="ui-input"
           value={name}
           onChange={e => setName(e.target.value)}
           onKeyDown={e => { if (e.key === 'Enter') handleSubmit() }}
-          placeholder="e.g. In review"
+          placeholder="e.g. In Review"
           maxLength={80}
         />
       </div>
 
-      <div className="brd-chips">
+      <div className="brd-suggest">
         {SUGGESTIONS.map(s => (
           <button
             key={s}
             type="button"
-            className={`brd-chip${name === s ? ' is-on' : ''}`}
+            className={`ui-chip${name === s ? ' is-on' : ''}`}
             onClick={() => setName(s)}
           >
+            <StatusIcon status={columnStatus(s)} size={12} />
             {s}
           </button>
         ))}
       </div>
 
-      {error && <div className="brd-error">{error}</div>}
-    </GlassModal>
+      {error && <div className="ui-error" role="alert">{error}</div>}
+    </Modal>
   )
 }

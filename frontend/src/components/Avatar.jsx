@@ -1,65 +1,24 @@
 import React from 'react'
+import { colorFor, initials } from './shell/palette'
 
 /**
- * Column accent spectrum — 8 colours that cycle.
- * Exported so columns and avatars can share the same palette.
+ * A person as a coloured disc with their initials.
+ *
+ * The colour comes from the name, so the same person is the same colour
+ * on every card, list and menu. Styled by `.ui-avatar`.
  */
-export const COLUMN_COLORS = [
-  '#7C6FF7', // violet
-  '#4F9CF9', // blue
-  '#34D399', // emerald
-  '#FBBF24', // amber
-  '#F87171', // rose
-  '#A78BFA', // purple
-  '#38BDF8', // sky
-  '#FB923C', // orange
-]
-
-/**
- * Deterministically pick a background colour from a name string.
- */
-function colorFromName(name = '') {
-  let hash = 0
-  for (let i = 0; i < name.length; i++) {
-    hash = name.charCodeAt(i) + ((hash << 5) - hash)
-  }
-  return COLUMN_COLORS[Math.abs(hash) % COLUMN_COLORS.length]
-}
-
-function initials(name = '') {
-  return name
-    .split(' ')
-    .filter(Boolean)
-    .slice(0, 2)
-    .map(w => w[0].toUpperCase())
-    .join('')
-}
-
-const styles = {
-  avatar: (size, bg) => ({
-    width: size,
-    height: size,
-    borderRadius: '50%',
-    background: bg,
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    fontSize: size * 0.38,
-    fontWeight: 600,
-    color: '#fff',
-    flexShrink: 0,
-    userSelect: 'none',
-    letterSpacing: '-0.02em',
-    border: '1.5px solid rgba(255,255,255,0.12)',
-  }),
-}
-
-export default function Avatar({ name, size = 26 }) {
+export default function Avatar({ name, size = 20, decorative = false }) {
   if (!name) return null
-  const bg = colorFromName(name)
   return (
-    <div style={styles.avatar(size, bg)} title={name} aria-label={name}>
+    <span
+      className="ui-avatar"
+      style={{ '--c': colorFor(name), '--size': `${size}px` }}
+      title={decorative ? undefined : name}
+      aria-label={decorative ? undefined : name}
+      aria-hidden={decorative || undefined}
+      role={decorative ? undefined : 'img'}
+    >
       {initials(name)}
-    </div>
+    </span>
   )
 }

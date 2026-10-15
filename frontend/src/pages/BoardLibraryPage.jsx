@@ -1,7 +1,8 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react'
-import GlassShell from '../components/shell/GlassShell'
-import GlassTopbar from '../components/shell/GlassTopbar'
-import { Chevron } from '../components/shell/icons'
+import React, { useEffect, useMemo, useState } from 'react'
+import AppShell from '../components/shell/AppShell'
+import PageHeader from '../components/shell/PageHeader'
+import SearchField from '../components/shell/SearchField'
+import { WarnIcon } from '../components/shell/icons'
 import LibraryToolbar from '../components/library/LibraryToolbar'
 import LibraryGrid from '../components/library/LibraryGrid'
 import LibraryGridSkeleton from '../components/library/LibraryGridSkeleton'
@@ -10,7 +11,7 @@ import { getDashboard, getRecent } from '../api/dashboardApi'
 import { flattenBoards, filterBoards, sortBoards, SORTS } from '../api/boardsApi'
 import { getStarred, toggleStar } from '../api/starredApi'
 import { useRailNavigate } from '../hooks/useRailNavigate'
-import './BoardsPage.css'
+import '../styles/library.css'
 
 /**
  * The page both board libraries are made of — every board (Boards) or
@@ -46,11 +47,9 @@ export default function BoardLibraryPage({
   const [collapsed, setCollapsed] = useState(false)
   const [view, setView] = useState('grouped')
   const [sort, setSort] = useState('name')
-  // Seeded from storage, then kept here so a star redraws the card it was
+  // Seeded from storage, then kept here so a star redraws the row it was
   // pressed on — and drops the board off the page, when this is Starred.
   const [starredIds, setStarredIds] = useState(getStarred)
-
-  const scrollRef = useRef(null)
 
   useEffect(() => {
     let alive = true
@@ -79,113 +78,95 @@ export default function BoardLibraryPage({
 
   const { navigate, toast } = useRailNavigate(railId, onNavigate)
 
-  const rail = {
-    active: railId,
-    collapsed,
-    user,
-    onNavigate: navigate,
-    onSignOut,
-  }
-
-  const isReady = !loading && !failed
+  const openBoard = b => onOpenBoard?.(b.boardId, b.workspace, b.name)
 
   return (
-    <GlassShell {...rail}>
-      <div className="dsh-main">
-        <GlassTopbar
-          scrollRef={scrollRef}
-          ready={isReady}
-          collapsed={collapsed}
-          onToggleCollapse={() => setCollapsed(c => !c)}
-          query={query}
-          onQueryChange={setQuery}
-          searchPlaceholder={searchPlaceholder}
-          searchLabel={searchLabel}
-          user={user}
-        >
-          <button className="dsh-cta" onClick={() => onNavigate?.('dashboard')}>
-            <span className="dsh-cta-text">Dashboard</span>
-            <Chevron />
-          </button>
-        </GlassTopbar>
+    <AppShell
+      active={railId}
+      collapsed={collapsed}
+      user={user}
+      workspaces={data?.workspaces}
+      onNavigate={navigate}
+      onOpenBoard={onOpenBoard}
+      onSignOut={onSignOut}
+    >
+      <PageHeader
+        crumbs={[title]}
+        collapsed={collapsed}
+        onToggleCollapse={() => setCollapsed(c => !c)}
+      >
+        <SearchField
+          value={query}
+          onChange={setQuery}
+          placeholder={searchPlaceholder}
+          label={searchLabel}
+          hotkey
+        />
+      </PageHeader>
 
-        <div className="dsh-scroll" ref={scrollRef}>
-          <div className="dsh-crumbbar dsh-glass dsh-in">
-            <h1 className="dsh-pagetitle">{title}</h1>
-            <nav className="dsh-crumbs" aria-label="Breadcrumb">
-              <span>Home</span><Chevron />
-              <span className="dsh-crumb-now">{title}</span>
-            </nav>
-          </div>
-
-          {failed && (
-            <div className="dsh-center">
-              <span style={{ fontSize: 26 }}>⚠️</span>
-              <span>Couldn't load your boards.</span>
-            </div>
-          )}
-
-          {!failed && data && !data.live && (
-            <div className="dsh-banner dsh-in" style={{ '--in': '60ms' }}>
-              <span>◇</span>
-              Showing sample data — couldn't reach <code>GET /workspace/mine</code>.
-            </div>
-          )}
-
-          {!failed && (
-            <section className="dsh-panel dsh-glass dsh-in" style={{ '--in': '120ms' }}>
-              <LibraryToolbar
-                title={toolbarTitle}
-                noun="board"
-                flatLabel={flatLabel}
-                count={visible.length}
-                total={selected.length}
-                sorts={SORTS}
-                sort={sort}
-                onSortChange={setSort}
-                view={view}
-                onViewChange={setView}
-              />
-
-              {loading && <LibraryGridSkeleton />}
-
-              {!loading && selected.length === 0 && (
-                <div className="dsh-empty">{emptyMessage}</div>
-              )}
-
-              {!loading && selected.length > 0 && visible.length === 0 && (
-                <div className="dsh-empty">
-                  No boards match “{query.trim()}”.
-                </div>
-              )}
-
-              {!loading && visible.length > 0 && (
-                // Re-keying on the arrangement restages the cascade, so
-                // switching views reads as the grid rebuilding itself.
-                <LibraryGrid
-                  key={`${view}-${sort}`}
-                  items={visible}
-                  view={view}
-                  noun="board"
-                  getKey={board => board.boardId}
-                  renderItem={(board, index, key) => (
-                    <BoardCard
-                      key={key}
-                      board={board}
-                      index={index}
-                      onOpen={b => onOpenBoard?.(b.boardId, b.workspace, b.name)}
-                      isStarred={starredIds.includes(board.boardId)}
-                      onToggleStar={b => setStarredIds(toggleStar(b.boardId))}
-                    />
-                  )}
-                />
-              )}
-            </section>
-          )}
+      {failed ? (
+        <div className="ui-state">
+          <span className="ui-state-icon is-warn"><WarnIcon size={18} /></span>
+          <span className="ui-state-title">Couldn't load your boards.</span>
         </div>
+      ) : (
+        <>
+          <LibraryToolbar
+            title={toolbarTitle}
+            noun="board"
+            flatLabel={flatLabel}
+            count={visible.length}
+            total={selected.length}
+            sorts={SORTS}
+            sort={sort}
+            onSortChange={setSort}
+            view={view}
+            onViewChange={setView}
+          />
 
-        {toast && <div className="dsh-toast">{toast}</div>}
-      </div>
-    </GlassShell>
+          <div className="app-scroll">
+            {data && !data.live && (
+              <div className="ui-banner lib-banner">
+                Showing sample data — couldn't reach <code>GET /workspace/mine</code>.
+              </div>
+            )}
+
+            {loading && <LibraryGridSkeleton />}
+
+            {!loading && selected.length === 0 && (
+              <div className="ui-empty">{emptyMessage}</div>
+            )}
+
+            {!loading && selected.length > 0 && visible.length === 0 && (
+              <div className="ui-empty">No boards match “{query.trim()}”.</div>
+            )}
+
+            {!loading && visible.length > 0 && (
+              // Re-keying on the arrangement restages the cascade, so
+              // switching views reads as the list rebuilding itself.
+              <LibraryGrid
+                key={`${view}-${sort}`}
+                items={visible}
+                view={view}
+                noun="board"
+                getKey={board => board.boardId}
+                renderItem={(board, index, key) => (
+                  <BoardCard
+                    key={key}
+                    board={board}
+                    index={index}
+                    onOpen={openBoard}
+                    isStarred={starredIds.includes(board.boardId)}
+                    onToggleStar={b => setStarredIds(toggleStar(b.boardId))}
+                  />
+                )}
+              />
+            )}
+          </div>
+        </>
+      )}
+
+      {toast && <div className="ui-toast" role="status">{toast}</div>}
+    </AppShell>
   )
 }

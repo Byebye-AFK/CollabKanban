@@ -32,7 +32,7 @@ const css = {
     height: '100vh',
     display: 'flex',
     flexDirection: 'column',
-    background: 'var(--bg-base)',
+    background: 'var(--bg-app)',
     overflow: 'hidden',
   },
   main: {
@@ -83,14 +83,16 @@ export default function App() {
   }
 
   /**
-   * Rail navigation between the signed-in pages.
+   * Sidebar navigation between the signed-in pages.
    *
-   * A dashboard section asked for from elsewhere opens the dashboard and
-   * is handed on for it to scroll to. Anything the rail offers that has
-   * no page yet is left to the page itself, which says so rather than
-   * silently doing nothing.
+   * The sidebar is on the board page too, so going anywhere closes an
+   * open board first. A dashboard section asked for from elsewhere opens
+   * the dashboard and is handed on for it to scroll to. Anything the
+   * sidebar offers that has no page yet is left to the page itself,
+   * which says so rather than silently doing nothing.
    */
   const navigate = (id) => {
+    if (PAGES.includes(id) || DASHBOARD_SECTIONS.includes(id)) backToDashboard()
     if (PAGES.includes(id)) {
       setPendingSection(null)
       setView(id)
@@ -115,9 +117,8 @@ export default function App() {
   }
 
   // ── Board view ──
-  // BoardPage owns its own chrome (rail, top bar, search), so the app
-  // shell hands it the whole viewport rather than stacking a second
-  // header above it.
+  // BoardPage renders inside the same sidebar shell as every other page,
+  // so a board can be switched for another straight from the sidebar.
   if (user && activeBoardId) {
     return (
       <div style={css.app}>
@@ -129,6 +130,8 @@ export default function App() {
             user={user}
             onBack={backToDashboard}
             backLabel={BACK_LABEL[view] ?? 'Back to dashboard'}
+            onOpenBoard={openBoard}
+            onNavigate={navigate}
             onSignOut={signOut}
           />
         </main>
@@ -173,7 +176,7 @@ export default function App() {
     return (
       <div style={css.app}>
         <main style={css.main}>
-          <TeamsPage user={user} onNavigate={navigate} onSignOut={signOut} />
+          <TeamsPage user={user} onNavigate={navigate} onOpenBoard={openBoard} onSignOut={signOut} />
         </main>
       </div>
     )

@@ -1,94 +1,168 @@
-import React from 'react'
+import React, { useState } from 'react'
 import Avatar from '../Avatar'
+import { Icon, GLYPHS, ChevronDown, BoardIcon } from './icons'
+import { colorFor } from './palette'
 
 /**
- * Glass sidebar for the dashboard.
+ * The app sidebar, after Linear's.
  *
- * Expanded it reads as a labelled nav panel; collapsed it becomes an icon
- * rail with tooltips. Stroke icons throughout so weight stays consistent
- * at both widths.
+ * A short list of pages, a "Workspace" group of library views, and a
+ * "Your workspaces" tree whose workspaces open to list their boards —
+ * so a board is one click from anywhere, including another board.
+ *
+ * Only the workspace holding the open board starts expanded. The rest
+ * stay folded so a long list of workspaces reads as a list, not a wall.
  */
-const Icon = ({ d, size = 19 }) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill="none"
-    stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
-    {(Array.isArray(d) ? d : [d]).map((p, i) => <path key={i} d={p} />)}
-  </svg>
-)
-
 export const NAV = [
-  { id: 'dashboard',  label: 'Dashboard',  group: 'Workspace', d: ['M4 4h7v7H4z', 'M13 4h7v4h-7z', 'M13 10h7v10h-7z', 'M4 13h7v7H4z'] },
-  { id: 'graph',      label: 'Graph view', group: 'Workspace', d: ['M12 5.5a2.5 2.5 0 1 1 0 5 2.5 2.5 0 0 1 0-5z', 'M5 16a2 2 0 1 1 0 4 2 2 0 0 1 0-4z', 'M19 16a2 2 0 1 1 0 4 2 2 0 0 1 0-4z', 'M10.4 10.2 6.3 15.1', 'M13.6 10.2l4.1 4.9'] },
-  { id: 'workspaces', label: 'Workspaces', group: 'Workspace', d: ['M3 7.5 12 3l9 4.5-9 4.5-9-4.5z', 'M3 12l9 4.5 9-4.5', 'M3 16.5 12 21l9-4.5'] },
-  { id: 'teams',      label: 'Teams',      group: 'Workspace', d: ['M16 20v-1.5a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4V20', 'M9 10.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7z', 'M22 20v-1.5a4 4 0 0 0-3-3.87', 'M16 3.6a4 4 0 0 1 0 7.75'] },
-  { id: 'boards',     label: 'Boards',     group: 'Library',   d: ['M3 4.5h18v15H3z', 'M9 4.5v15', 'M15 4.5v15'] },
-  { id: 'starred',    label: 'Starred',    group: 'Library',   d: ['M12 3.5l2.6 5.4 5.9.8-4.3 4.2 1 5.9-5.2-2.8-5.2 2.8 1-5.9L3.5 9.7l5.9-.8z'] },
-  { id: 'settings',   label: 'Settings',   group: 'Library',   d: ['M12 15.2a3.2 3.2 0 1 0 0-6.4 3.2 3.2 0 0 0 0 6.4z', 'M19.4 15a1.6 1.6 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.6 1.6 0 0 0-2.7 1.1v.2a2 2 0 0 1-4 0v-.1a1.6 1.6 0 0 0-2.8-1.1l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1A1.6 1.6 0 0 0 3.4 15H3a2 2 0 0 1 0-4h.2A1.6 1.6 0 0 0 4.3 8.2l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1A1.6 1.6 0 0 0 9.9 4.3V4a2 2 0 1 1 4 0v.2a1.6 1.6 0 0 0 2.7 1.1l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.6 1.6 0 0 0 1.1 2.7h.2a2 2 0 0 1 0 4h-.2a1.6 1.6 0 0 0-1.1.9z'] },
+  { id: 'dashboard',  label: 'Dashboard',  group: null },
+  { id: 'starred',    label: 'Starred',    group: null },
+  { id: 'boards',     label: 'Boards',     group: 'Workspace' },
+  { id: 'teams',      label: 'Teams',      group: 'Workspace' },
+  { id: 'graph',      label: 'Graph view', group: 'Workspace' },
+  { id: 'workspaces', label: 'Workspaces', group: 'Workspace' },
 ]
 
-const SIGN_OUT = {
-  id: 'signout',
-  label: 'Sign out',
-  d: ['M15 17l5-5-5-5', 'M20 12H9', 'M11 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h5'],
+const SETTINGS = { id: 'settings', label: 'Settings' }
+
+function NavItem({ item, active, onClick, children }) {
+  return (
+    <button
+      className={`app-nav-item${active ? ' is-active' : ''}`}
+      onClick={onClick}
+      aria-current={active ? 'page' : undefined}
+      aria-label={item.label}
+      title={item.label}
+    >
+      <Icon paths={GLYPHS[item.id]} />
+      <span className="app-nav-text">{item.label}</span>
+      {children}
+    </button>
+  )
 }
 
-function NavItem({ item, active, onClick }) {
+/** A folding section heading — "Workspace ▾", "Your workspaces ▾". */
+function Group({ label, children }) {
+  const [isOpen, setOpen] = useState(true)
   return (
-    <div className="dsh-navwrap">
+    <div className="app-nav-group">
       <button
-        className={`dsh-navitem${active ? ' is-active' : ''}`}
-        onClick={onClick}
-        aria-current={active ? 'page' : undefined}
-        aria-label={item.label}
+        className={`app-nav-heading${isOpen ? ' is-open' : ''}`}
+        onClick={() => setOpen(o => !o)}
+        aria-expanded={isOpen}
       >
-        <Icon d={item.d} />
-        <span className="dsh-navtext">{item.label}</span>
+        {label}
+        <ChevronDown size={10} />
       </button>
-      <span className="dsh-tip" role="tooltip">{item.label}</span>
+      {isOpen && <div className="app-nav-list">{children}</div>}
     </div>
   )
 }
 
-export default function Sidebar({ active = 'dashboard', collapsed = false, user, onNavigate, onSignOut }) {
-  // Group headings are rendered from the nav table itself, so adding an
-  // item never means touching the markup below.
-  const groups = NAV.reduce((acc, item) => {
-    const g = acc.find(x => x.name === item.group)
-    if (g) g.items.push(item)
-    else acc.push({ name: item.group, items: [item] })
-    return acc
-  }, [])
+function WorkspaceTree({ workspace, isInitiallyOpen, activeBoardId, onOpenBoard }) {
+  const [isOpen, setOpen] = useState(isInitiallyOpen)
+  const boards = workspace.boards ?? []
 
   return (
-    <nav className={`dsh-rail dsh-glass${collapsed ? ' is-collapsed' : ''}`} aria-label="Primary">
-      <div className="dsh-brand">
-        <span className="dsh-mark" aria-hidden="true"><i /><i /><i /><i /></span>
-        <span className="dsh-brand-name">CollabKanban</span>
+    <div className="app-tree">
+      <button
+        className="app-nav-item app-tree-head"
+        onClick={() => setOpen(o => !o)}
+        aria-expanded={isOpen}
+        title={workspace.name}
+      >
+        <span className="app-ws-mark" style={{ '--c': colorFor(workspace.name) }} aria-hidden="true">
+          {workspace.name.charAt(0).toUpperCase()}
+        </span>
+        <span className="app-nav-text">{workspace.name}</span>
+        <ChevronDown size={10} className={`app-tree-chevron${isOpen ? ' is-open' : ''}`} />
+      </button>
+
+      {isOpen && (
+        <div className="app-tree-body">
+          {boards.length === 0 && <div className="app-tree-empty">No boards yet</div>}
+          {boards.map(board => (
+            <button
+              key={board.boardId}
+              className={`app-nav-item app-tree-item${board.boardId === activeBoardId ? ' is-active' : ''}`}
+              onClick={() => onOpenBoard?.(board.boardId, workspace, board.name)}
+              aria-current={board.boardId === activeBoardId ? 'page' : undefined}
+              title={board.name}
+            >
+              <BoardIcon size={14} />
+              <span className="app-nav-text">{board.name}</span>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+export default function Sidebar({
+  active = 'dashboard',
+  collapsed = false,
+  user,
+  workspaces = [],
+  activeBoardId = null,
+  onNavigate,
+  onOpenBoard,
+  onSignOut,
+}) {
+  const top = NAV.filter(item => item.group === null)
+  const library = NAV.filter(item => item.group === 'Workspace')
+
+  return (
+    <nav
+      className={`app-sidebar${collapsed ? ' is-collapsed' : ''}`}
+      aria-label="Primary"
+      aria-hidden={collapsed || undefined}
+      inert={collapsed ? '' : undefined}
+    >
+      <div className="app-brand">
+        <span className="app-brand-mark" aria-hidden="true"><i /><i /><i /></span>
+        <span className="app-brand-name">CollabKanban</span>
       </div>
 
-      {groups.map(group => (
-        <React.Fragment key={group.name}>
-          <div className="dsh-navlabel"><span className="dsh-navlabel-text">{group.name}</span></div>
-          {group.items.map(item => (
-            <NavItem
-              key={item.id}
-              item={item}
-              active={active === item.id}
-              onClick={() => onNavigate?.(item.id)}
-            />
+      <div className="app-sidebar-scroll">
+        <div className="app-nav-list">
+          {top.map(item => (
+            <NavItem key={item.id} item={item} active={active === item.id} onClick={() => onNavigate?.(item.id)} />
           ))}
-        </React.Fragment>
-      ))}
-
-      <div className="dsh-rail-foot">
-        <div className="dsh-rail-sep" />
-        <div className="dsh-usercard">
-          <Avatar name={user?.name || 'Guest'} size={32} />
-          <div className="dsh-user-meta">
-            <div className="dsh-user-name">{user?.name || 'Guest'}</div>
-            <div className="dsh-user-mail">{user?.email || 'not signed in'}</div>
-          </div>
         </div>
-        <NavItem item={SIGN_OUT} active={false} onClick={onSignOut} />
+
+        <Group label="Workspace">
+          {library.map(item => (
+            <NavItem key={item.id} item={item} active={active === item.id} onClick={() => onNavigate?.(item.id)} />
+          ))}
+        </Group>
+
+        {workspaces.length > 0 && (
+          <Group label="Your workspaces">
+            {workspaces.map(ws => (
+              <WorkspaceTree
+                key={ws.workspaceId}
+                workspace={ws}
+                isInitiallyOpen={(ws.boards ?? []).some(b => b.boardId === activeBoardId)}
+                activeBoardId={activeBoardId}
+                onOpenBoard={onOpenBoard}
+              />
+            ))}
+          </Group>
+        )}
+      </div>
+
+      <div className="app-sidebar-foot">
+        <NavItem item={SETTINGS} active={false} onClick={() => onNavigate?.(SETTINGS.id)} />
+        <div className="app-user">
+          <Avatar name={user?.name || 'Guest'} size={22} decorative />
+          <span className="app-user-text">
+            <span className="app-user-name">{user?.name || 'Guest'}</span>
+            <span className="app-user-mail">{user?.email || 'not signed in'}</span>
+          </span>
+          <button className="ui-iconbtn is-sm" onClick={onSignOut} aria-label="Sign out" title="Sign out">
+            <Icon paths={GLYPHS.signout} size={14} />
+          </button>
+        </div>
       </div>
     </nav>
   )

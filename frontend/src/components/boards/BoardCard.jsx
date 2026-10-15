@@ -1,27 +1,28 @@
 import React from 'react'
 import Avatar from '../Avatar'
 import ProgressRing from './ProgressRing'
-import { StarIcon } from '../shell/icons'
+import { StarIcon, BoardIcon } from '../shell/icons'
 import { colorFor } from '../shell/palette'
 import { progressPercent } from '../../api/boardsApi'
 import { relativeTime } from '../../api/dashboardApi'
 
 /**
- * One board, on its own pane of glass.
+ * One board as a list row: name and workspace on the left, progress,
+ * members and the star on the right.
  *
  * Carries enough workspace context to stand alone in the flat view —
- * the tint and the chip both come from the workspace name, so boards
- * from the same workspace read as a set however the grid is sorted.
+ * the chip's dot comes from the workspace name, so boards from the same
+ * workspace read as a set however the list is sorted.
  */
 
 /** Members shown before the stack collapses into a +N counter. */
 const MAX_AVATARS = 3
 
-/** Per-card stagger applied to the ring draw-in, on top of the card's own. */
-const RING_DELAY_MS = 260
+/** Per-row stagger, in ms. */
+const STAGGER_MS = 30
 
 /**
- * What the card says about its cards.
+ * What the row says about its cards.
  *
  * A board whose payload carried no card information says so by counting
  * columns instead — never by showing a made-up total.
@@ -39,7 +40,6 @@ function progressLabel(progress) {
 export default function BoardCard({ board, index = 0, onOpen, isStarred = false, onToggleStar }) {
   const { name, workspaceName, members, progress, lastVisitedAt } = board
 
-  const color = colorFor(workspaceName)
   const percent = progressPercent(progress)
   const shown = members.slice(0, MAX_AVATARS)
   const extra = members.length - shown.length
@@ -51,8 +51,8 @@ export default function BoardCard({ board, index = 0, onOpen, isStarred = false,
 
   return (
     <article
-      className="lib-card dsh-glass dsh-in"
-      style={{ '--in': `${index * 55}ms`, '--tint': color }}
+      className="lib-card ui-in"
+      style={{ '--in': `${index * STAGGER_MS}ms` }}
       role="button"
       tabIndex={0}
       onClick={open}
@@ -61,47 +61,41 @@ export default function BoardCard({ board, index = 0, onOpen, isStarred = false,
       }}
       aria-label={`Open ${name} in ${workspaceName}`}
     >
-      {/* Only rendered when it has something to hold, so a board with
-          neither star nor cards carries no empty row above its name. */}
-      {(canStar || hasRing) && (
-        <div className="lib-card-head">
-          {canStar && (
-            <button
-              className={`lib-star${isStarred ? ' is-on' : ''}`}
-              // The card itself opens the board, so the star has to keep
-              // both its click and its Enter/Space to itself.
-              onClick={e => { e.stopPropagation(); onToggleStar(board) }}
-              onKeyDown={e => e.stopPropagation()}
-              aria-pressed={isStarred}
-              aria-label={isStarred ? `Unstar ${name}` : `Star ${name}`}
-              title={isStarred ? 'Remove from Starred' : 'Add to Starred'}
-            >
-              <StarIcon filled={isStarred} />
-            </button>
-          )}
-          {hasRing && (
-            <ProgressRing percent={percent} color={color} delay={RING_DELAY_MS + index * 55} />
-          )}
-        </div>
-      )}
+      <span className="lib-icon" aria-hidden="true"><BoardIcon size={15} /></span>
 
       <h4 className="lib-name" title={name}>{name}</h4>
-      <span className="dsh-chip lib-ws-chip">
-        <i style={{ background: color }} aria-hidden="true" />
+      <span className="ui-chip lib-ws-chip">
+        <i style={{ '--c': colorFor(workspaceName) }} aria-hidden="true" />
         {workspaceName}
       </span>
 
-      <div className="lib-card-foot">
-        <div className="dsh-stack">
-          {shown.map(m => <span key={m}><Avatar name={m} size={26} /></span>)}
-          {extra > 0 && <span className="dsh-more">+{extra}</span>}
-          {shown.length === 0 && <span className="lib-nomembers">No members</span>}
-        </div>
-        <span className="lib-meta">
-          {progressLabel(progress)}
-          {lastVisitedAt && <> · {relativeTime(lastVisitedAt)}</>}
-        </span>
-      </div>
+      <span className="lib-meta">
+        {progressLabel(progress)}
+        {lastVisitedAt && <> · {relativeTime(lastVisitedAt)}</>}
+      </span>
+
+      {hasRing ? <ProgressRing percent={percent} delay={200 + index * STAGGER_MS} /> : <span className="lib-ring-gap" />}
+
+      <span className="ui-avatars lib-members">
+        {shown.map(m => <Avatar key={m} name={m} size={20} />)}
+        {extra > 0 && <span className="ui-avatar is-more" style={{ '--size': '20px' }}>+{extra}</span>}
+        {shown.length === 0 && <span className="lib-nomembers">No members</span>}
+      </span>
+
+      {canStar ? (
+        <button
+          className={`ui-iconbtn is-sm lib-star${isStarred ? ' is-on' : ''}`}
+          // The row itself opens the board, so the star has to keep
+          // both its click and its Enter/Space to itself.
+          onClick={e => { e.stopPropagation(); onToggleStar(board) }}
+          onKeyDown={e => e.stopPropagation()}
+          aria-pressed={isStarred}
+          aria-label={isStarred ? `Unstar ${name}` : `Star ${name}`}
+          title={isStarred ? 'Remove from Starred' : 'Add to Starred'}
+        >
+          <StarIcon filled={isStarred} size={14} />
+        </button>
+      ) : <span className="lib-star-gap" />}
     </article>
   )
 }

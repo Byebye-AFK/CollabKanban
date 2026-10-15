@@ -207,6 +207,19 @@ export function normalizeWorkspace(workspace, index = 0) {
   }
 }
 
+// ── Last load, kept in memory ────────────────────────────────
+// The sidebar lists every workspace's boards, including while a board
+// is open — a page that never calls getDashboard() itself. Rather than
+// fetch /workspace/mine again for that, it reads what the page it came
+// from already loaded. A board is only ever opened from such a page, so
+// this is filled by the time anyone asks.
+let lastWorkspaces = []
+
+/** The workspaces from the most recent getDashboard(), or [] before one. */
+export function getCachedWorkspaces() {
+  return lastWorkspaces
+}
+
 /**
  * Loads everything the dashboard renders.
  * @returns {Promise<{workspaces: Array, stats: Object, live: boolean}>}
@@ -223,6 +236,7 @@ export async function getDashboard() {
     workspaces = demoWorkspaces().map(normalizeWorkspace)
     live = false
   }
+  lastWorkspaces = workspaces
   const recent = getRecent()
   return { workspaces, stats: summarise(workspaces, recent), live }
 }

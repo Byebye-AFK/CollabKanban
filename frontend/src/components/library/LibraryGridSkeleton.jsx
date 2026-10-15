@@ -1,10 +1,10 @@
 import React from 'react'
 
 /**
- * Loading state shaped like the grid it becomes.
+ * Loading state shaped like the list it becomes.
  *
- * A skeleton in the final layout means the page does not reflow when the
- * data lands — the cards fill in where the placeholders already were.
+ * Placeholder rows in the final layout mean the page does not reflow
+ * when the data lands — the rows fill in where the placeholders were.
  */
 const PLACEHOLDER_COUNT = 6
 
@@ -12,17 +12,11 @@ export default function LibraryGridSkeleton() {
   return (
     <div className="lib-grid" aria-hidden="true">
       {Array.from({ length: PLACEHOLDER_COUNT }, (_, i) => (
-        <div className="lib-card lib-skeleton dsh-glass" key={i} style={{ '--in': `${i * 55}ms` }}>
-          <div className="lib-card-head">
-            <span className="lib-sk lib-sk-mark" />
-            <span className="lib-sk lib-sk-ring" />
-          </div>
-          <span className="lib-sk lib-sk-line" />
-          <span className="lib-sk lib-sk-chip" />
-          <div className="lib-card-foot">
-            <span className="lib-sk lib-sk-stack" />
-            <span className="lib-sk lib-sk-meta" />
-          </div>
+        <div className="lib-card lib-skeleton" key={i} style={{ '--in': `${i * 40}ms` }}>
+          <span className="ui-skeleton lib-sk-icon" />
+          <span className="ui-skeleton lib-sk-name" />
+          <span className="ui-skeleton lib-sk-chip" />
+          <span className="ui-skeleton lib-sk-meta" />
         </div>
       ))}
     </div>

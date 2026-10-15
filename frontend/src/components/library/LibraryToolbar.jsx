@@ -1,17 +1,16 @@
 import React, { useEffect, useRef, useState } from 'react'
-import { SortIcon, GroupIcon, GridIcon } from '../shell/icons'
+import { SortIcon, GroupIcon, ListIcon } from '../shell/icons'
 
 /**
- * Heading strip for a library grid: a count, the grouped/flat switch
- * and the sort menu.
+ * The toolbar row above a library list: its title and count on the
+ * left, the grouped/flat switch and the sort menu on the right.
  *
- * Search lives in the top bar rather than here — there is only ever one
- * search on a page, and putting it in the bar keeps it reachable once
- * the grid has scrolled past this strip.
+ * Search lives in the page header rather than here — there is only ever
+ * one search on a page, and the header stays put as the list scrolls.
  */
 const VIEWS = [
   { id: 'grouped', label: 'Grouped', Icon: GroupIcon },
-  { id: 'flat', label: 'All', Icon: GridIcon },
+  { id: 'flat', label: 'All', Icon: ListIcon },
 ]
 
 export default function LibraryToolbar({
@@ -52,32 +51,30 @@ export default function LibraryToolbar({
   const plural = total === 1 ? noun : `${noun}s`
 
   return (
-    <div className="dsh-panel-head lib-toolbar">
-      <div>
-        <h2 className="dsh-sec-title">{title}</h2>
-        <div className="dsh-sec-sub">
-          {isFiltered ? `${count} of ${total} ${noun}s` : `${total} ${plural}`}
-          {' · sorted by '}{sortLabel.toLowerCase()}
-        </div>
-      </div>
+    <div className="app-toolbar lib-toolbar">
+      <h2 className="lib-toolbar-title">{title}</h2>
+      <span className="app-meta">
+        {isFiltered ? `${count} of ${total} ${noun}s` : `${total} ${plural}`}
+        {' · sorted by '}{sortLabel.toLowerCase()}
+      </span>
 
-      <div className="dsh-panel-actions" ref={menuRef}>
-        <div className="lib-viewtoggle" role="group" aria-label={`${noun} grouping`}>
+      <div className="app-toolbar-right" ref={menuRef}>
+        <div className="app-segment" role="group" aria-label={`${noun} grouping`}>
           {VIEWS.map(({ id, label, Icon }) => (
             <button
               key={id}
-              className={`lib-viewbtn${view === id ? ' is-on' : ''}`}
+              className={view === id ? 'is-on' : undefined}
               onClick={() => onViewChange(id)}
               aria-pressed={view === id}
             >
-              <Icon />
+              <Icon size={14} />
               <span>{id === 'flat' ? flatLabel : label}</span>
             </button>
           ))}
         </div>
 
         <button
-          className={`dsh-iconbtn${isMenuOpen ? ' is-on' : ''}`}
+          className={`ui-iconbtn${isMenuOpen ? ' is-on' : ''}`}
           onClick={() => setMenuOpen(o => !o)}
           aria-label={`Sort ${noun}s`}
           aria-expanded={isMenuOpen}
@@ -88,7 +85,8 @@ export default function LibraryToolbar({
         {children}
 
         {isMenuOpen && (
-          <div className="dsh-menu" role="menu">
+          <div className="ui-menu lib-sortmenu" role="menu">
+            <div className="ui-menu-label">Sort by</div>
             {sorts.map(s => (
               <button
                 key={s.id}

@@ -1,45 +1,39 @@
 import React, { useCallback, useRef, useState } from 'react'
 import KanbanColumn from './KanbanColumn'
 import CreateColumnModal from './CreateColumnModal'
+import HiddenColumns from './board/HiddenColumns'
+import { BoardIcon, PlusIcon } from './shell/icons'
 
-const PlusIcon = ({ size = 17 }) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor"
-    strokeWidth="2" strokeLinecap="round">
-    <path d="M12 5v14M5 12h14" />
-  </svg>
-)
-
-const BoardIcon = () => (
-  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-    strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M3 4.5h18v15H3z" /><path d="M9 4.5v15" /><path d="M15 4.5v15" />
-  </svg>
-)
+/** How long a dropped card keeps its "just landed" settle animation. */
+const LANDED_MS = 700
 
 /**
  * KanbanBoard — the stage.
  *
- * Holds the transient interaction state that spans columns: which card
- * is currently in flight (so every column can open its gaps) and which
- * card has just landed (so it can play its settle animation once).
+ * Lays out the columns the page chose to show, with the hidden ones in
+ * a panel at the right, and holds the interaction state that spans
+ * columns: which card is in flight (so every column opens its gaps) and
+ * which card just landed (so it plays its settle animation once).
  */
 export default function KanbanBoard({
   board,
+  columns = [],
+  hiddenColumns = [],
   query = '',
+  showDescriptions = true,
   createColumnOpen,
   onCreateColumnOpen,
   onAddColumn,
   onAddCard,
   onDeleteCard,
   onDeleteColumn,
+  onHideColumn,
+  onShowColumn,
   onMoveCard,
-  registerColumn,
 }) {
   const [drag, setDrag] = useState(null)
   const [landedCardId, setLandedCardId] = useState(null)
   const landTimer = useRef(null)
-
-  const columns = board?.columns ?? []
 
   const handleDragStart = useCallback((cardId, columnId) => {
     setDrag({ cardId, columnId })
@@ -55,7 +49,7 @@ export default function KanbanBoard({
     setDrag(null)
     setLandedCardId(cardId)
     clearTimeout(landTimer.current)
-    landTimer.current = setTimeout(() => setLandedCardId(null), 700)
+    landTimer.current = setTimeout(() => setLandedCardId(null), LANDED_MS)
 
     try {
       await onMoveCard?.(cardId, sourceColumnId, targetColumnId, targetIndex)
@@ -64,27 +58,23 @@ export default function KanbanBoard({
     }
   }, [onMoveCard])
 
-  if (columns.length === 0) {
-    return (
-      <div className="brd-center">
-        <div className="brd-panel brd-glass">
-          <div className="brd-panel-icon"><BoardIcon /></div>
-          <div className="brd-panel-title">This board is empty</div>
-          <div className="brd-panel-desc">
-            Add your first column to start organising work — “To do”, “In progress”, whatever fits.
-          </div>
-          <button className="brd-btn" onClick={() => onCreateColumnOpen(true)}>
-            <PlusIcon size={15} />
-            Create first column
-          </button>
-        </div>
+  const createModal = createColumnOpen && (
+    <CreateColumnModal onSubmit={onAddColumn} onClose={() => onCreateColumnOpen(false)} />
+  )
 
-        {createColumnOpen && (
-          <CreateColumnModal
-            onSubmit={onAddColumn}
-            onClose={() => onCreateColumnOpen(false)}
-          />
-        )}
+  if ((board?.columns ?? []).length === 0) {
+    return (
+      <div className="ui-state brd-stage-empty">
+        <span className="ui-state-icon"><BoardIcon size={18} /></span>
+        <span className="ui-state-title">This board is empty</span>
+        <span className="ui-state-desc">
+          Add your first column to start organising work — “Todo”, “In Progress”, whatever fits.
+        </span>
+        <button className="ui-btn is-primary" onClick={() => onCreateColumnOpen(true)}>
+          <PlusIcon size={12} />
+          Create first column
+        </button>
+        {createModal}
       </div>
     )
   }
@@ -92,40 +82,37 @@ export default function KanbanBoard({
   return (
     <div className="brd-stage">
       <div className="brd-columns">
+        {columns.length === 0 && (
+          <div className="ui-state brd-view-empty">
+            <span className="ui-state-title">No columns in this view</span>
+            <span className="ui-state-desc">Switch to All cards, or show a hidden column.</span>
+          </div>
+        )}
+
         {columns.map((col, idx) => (
           <KanbanColumn
             key={col.columnId}
             column={col}
             columnIndex={idx}
+            boardName={board.name}
             query={query}
             drag={drag}
             landedCardId={landedCardId}
-            columnRef={node => registerColumn?.(col.columnId, node)}
+            showDescription={showDescriptions}
             onAddCard={onAddCard}
             onDeleteCard={onDeleteCard}
             onDeleteColumn={onDeleteColumn}
+            onHideColumn={onHideColumn}
             onMoveCard={handleMoveCard}
             onDragStart={handleDragStart}
             onDragEnd={handleDragEnd}
           />
         ))}
 
-        <button
-          className="brd-addcol"
-          style={{ '--d': `${Math.min(columns.length, 8) * 55}ms` }}
-          onClick={() => onCreateColumnOpen(true)}
-        >
-          <PlusIcon />
-          New column
-        </button>
+        <HiddenColumns columns={hiddenColumns} onShow={onShowColumn} onMoveCard={handleMoveCard} />
       </div>
 
-      {createColumnOpen && (
-        <CreateColumnModal
-          onSubmit={onAddColumn}
-          onClose={() => onCreateColumnOpen(false)}
-        />
-      )}
+      {createModal}
     </div>
   )
 }

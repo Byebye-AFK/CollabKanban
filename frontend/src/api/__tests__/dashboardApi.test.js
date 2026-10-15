@@ -1,4 +1,4 @@
-import { describe, test, expect } from 'vitest'
+import { describe, test, expect, vi, afterEach } from 'vitest'
 import { normalizeWorkspace, relativeTime } from '../dashboardApi'
 
 /** Exactly the shape Spring's WorkSpaceResponse serialises. */
@@ -126,5 +126,44 @@ describe('relativeTime', () => {
     expect(relativeTime(Date.now() - 180 * minute)).toBe('3h ago')
     expect(relativeTime(Date.now() - 60 * 24 * minute)).toBe('yesterday')
     expect(relativeTime(Date.now() - 60 * 24 * 3 * minute)).toBe('3d ago')
+  })
+})
+
+// Each test loads a fresh copy of the module, since the cache is
+// module state and must start empty.
+describe('getCachedWorkspaces', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals()
+    vi.restoreAllMocks()
+  })
+
+  const loadFresh = async () => {
+    vi.resetModules()
+    return import('../dashboardApi')
+  }
+
+  test('is empty before the dashboard has loaded', async () => {
+    const api = await loadFresh()
+
+    expect(api.getCachedWorkspaces()).toEqual([])
+  })
+
+  test('holds the workspaces from the last load', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, json: async () => [apiWorkspace] }))
+    const api = await loadFresh()
+
+    await api.getDashboard()
+
+    expect(api.getCachedWorkspaces().map(w => w.name)).toEqual(['Product Core'])
+  })
+
+  test('holds the sample workspaces when the load fell back to them', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('offline')))
+    vi.spyOn(console, 'log').mockImplementation(() => {})
+    const api = await loadFresh()
+
+    const { workspaces } = await api.getDashboard()
+
+    expect(api.getCachedWorkspaces()).toEqual(workspaces)
   })
 })

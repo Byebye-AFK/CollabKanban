@@ -1,51 +1,76 @@
-import React, { useState } from 'react'
+import React, { useCallback, useRef, useState } from 'react'
 import TaskCard from './TaskCard'
 import CreateCardModal from './CreateCardModal'
-import { COLUMN_COLORS } from './Avatar'
+import { StatusIcon, MoreIcon, PlusIcon, EyeOffIcon, TrashIcon } from './shell/icons'
+import { columnStatus, cardKey } from '../api/boardStatus'
+import { useDismiss } from '../hooks/useDismiss'
 
-/**
- * Returns a colour from the COLUMN_COLORS spectrum by index.
- * Cycles through the palette so there's always a colour,
- * regardless of how many columns exist.
- */
-export function columnColor(index) {
-  return COLUMN_COLORS[index % COLUMN_COLORS.length]
+/** Column entrance stagger, and the column count past which it stops growing. */
+const STAGGER_MS = 40
+const MAX_STAGGER_STEPS = 8
+
+/** The column's ⋯ menu: hide it into the side panel, or delete it. */
+function ColumnMenu({ column, onHide, onDelete }) {
+  const [isOpen, setOpen] = useState(false)
+  const rootRef = useRef(null)
+  const close = useCallback(() => setOpen(false), [])
+  useDismiss(rootRef, isOpen, close)
+
+  return (
+    <div className="brd-col-menu" ref={rootRef}>
+      <button
+        className={`ui-iconbtn is-sm${isOpen ? ' is-on' : ''}`}
+        onClick={() => setOpen(o => !o)}
+        aria-label={`Column options for ${column.name}`}
+        aria-expanded={isOpen}
+      >
+        <MoreIcon size={14} />
+      </button>
+      {isOpen && (
+        <div className="ui-menu" role="menu">
+          <button role="menuitem" onClick={() => { close(); onHide?.(column.columnId) }}>
+            <EyeOffIcon size={14} /> Hide column
+          </button>
+          <div className="ui-menu-sep" />
+          <button
+            role="menuitem"
+            className="is-danger"
+            onClick={() => {
+              close()
+              if (window.confirm(`Delete "${column.name}" and all cards inside it?`)) {
+                onDelete?.(column.columnId)
+              }
+            }}
+          >
+            <TrashIcon size={14} /> Delete column
+          </button>
+        </div>
+      )}
+    </div>
+  )
 }
 
-const PlusIcon = () => (
-  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-    strokeWidth="2" strokeLinecap="round">
-    <path d="M12 5v14M5 12h14" />
-  </svg>
-)
-
-const CloseIcon = () => (
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-    strokeWidth="2.2" strokeLinecap="round">
-    <path d="M6 6l12 12M18 6L6 18" />
-  </svg>
-)
-
 /**
- * KanbanColumn — a frosted pane holding frosted cards.
+ * KanbanColumn — a header and a stack of cards, with no box of its own.
  *
  * Drop targets are the gaps *between* cards rather than the cards
- * themselves: each gap grows into a glowing slot as the drag passes
- * over it, so the list visibly opens a space for the card being
- * carried. Hovering the top or bottom half of a card activates the gap
- * on that side, which keeps the whole list covered without leaving dead
- * zones between the slots.
+ * themselves: each gap opens into a slot as the drag passes over it, so
+ * the list visibly makes room for the card being carried. Hovering the
+ * top or bottom half of a card activates the gap on that side, which
+ * keeps the whole list covered without dead zones between the slots.
  */
 export default function KanbanColumn({
   column,
   columnIndex,
+  boardName,
   query = '',
   drag,
   landedCardId,
-  columnRef,
+  showDescription = true,
   onAddCard,
   onDeleteCard,
   onDeleteColumn,
+  onHideColumn,
   onMoveCard,
   onDragStart,
   onDragEnd,
@@ -53,7 +78,7 @@ export default function KanbanColumn({
   const [hoverSlot, setHoverSlot] = useState(null)
   const [showAddCard, setShowAddCard] = useState(false)
 
-  const color = columnColor(columnIndex)
+  const status = columnStatus(column.name)
   const cards = column.cards ?? []
 
   // Cards are filtered for display only — slot indices stay anchored to
@@ -145,35 +170,38 @@ export default function KanbanColumn({
   return (
     <>
       <section
-        ref={columnRef}
         className={className}
-        style={{ '--c': color, '--d': `${Math.min(columnIndex, 8) * 55}ms` }}
+        style={{ '--d': `${Math.min(columnIndex, MAX_STAGGER_STEPS) * STAGGER_MS}ms` }}
         onDragLeave={handleDragLeave}
         aria-label={column.name}
       >
         <header className="brd-col-head">
-          <span className="brd-col-bar" aria-hidden="true" />
+          <StatusIcon status={status} />
           <h2 className="brd-col-name" title={column.name}>{column.name}</h2>
           <span className="brd-col-count">
             {q ? `${visible.length}/${cards.length}` : cards.length}
           </span>
-          <button
-            className="brd-col-del"
-            onClick={() => {
-              if (window.confirm(`Delete "${column.name}" and all cards inside it?`)) {
-                onDeleteColumn?.(column.columnId)
-              }
-            }}
-            title="Delete column"
-            aria-label={`Delete column ${column.name}`}
-          >
-            <CloseIcon />
-          </button>
+          <div className="brd-col-actions">
+            <ColumnMenu column={column} onHide={onHideColumn} onDelete={onDeleteColumn} />
+            <button
+              className="ui-iconbtn is-sm"
+              onClick={() => setShowAddCard(true)}
+              aria-label={`Add card to ${column.name}`}
+              title="Add card"
+            >
+              <PlusIcon size={14} />
+            </button>
+          </div>
         </header>
 
-        <div className="brd-col-rule" />
-
-        <div className="brd-cards">
+        {/* Empty space below the last card, or in an empty column, drops
+            at the end. Only a drag over the list itself counts — events
+            bubbling up from a card or slot have already chosen a gap. */}
+        <div
+          className="brd-cards"
+          onDragOver={e => { if (e.target === e.currentTarget) allowDrop(e, cards.length) }}
+          onDrop={e => { if (e.target === e.currentTarget) handleDrop(e, cards.length) }}
+        >
           {slot(0)}
 
           {cards.map((card, index) => {
@@ -187,9 +215,11 @@ export default function KanbanColumn({
                   <TaskCard
                     card={card}
                     columnId={column.columnId}
-                    color={color}
+                    status={status}
+                    cardKey={cardKey(boardName, card.cardId)}
                     query={query}
                     landed={landedCardId === card.cardId}
+                    showDescription={showDescription}
                     onDelete={onDeleteCard}
                     onDragStart={onDragStart}
                     onDragEnd={onDragEnd}
@@ -201,25 +231,27 @@ export default function KanbanColumn({
           })}
 
           {visible.length === 0 && (
-            <div className="brd-col-empty">
-              {q ? 'No matching cards' : 'Nothing here yet'}
-            </div>
+            q
+              ? <div className="brd-col-empty">No matching cards</div>
+              : (
+                <button
+                  className="brd-col-empty is-action"
+                  onClick={() => setShowAddCard(true)}
+                  onDragOver={e => allowDrop(e, cards.length)}
+                  onDrop={e => handleDrop(e, cards.length)}
+                >
+                  <PlusIcon size={12} /> Add a card
+                </button>
+              )
           )}
         </div>
-
-        <footer className="brd-col-foot">
-          <button className="brd-addcard" onClick={() => setShowAddCard(true)}>
-            <PlusIcon />
-            Add card
-          </button>
-        </footer>
       </section>
 
       {showAddCard && (
         <CreateCardModal
           columnId={column.columnId}
           columnName={column.name}
-          columnColor={color}
+          status={status}
           onSubmit={onAddCard}
           onClose={() => setShowAddCard(false)}
         />

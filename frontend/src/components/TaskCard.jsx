@@ -1,5 +1,9 @@
 import React, { useRef, useState } from 'react'
 import Avatar from './Avatar'
+import { StatusIcon, TrashIcon, UnassignedIcon } from './shell/icons'
+
+/** How long the delete button waits for its confirming second click. */
+const CONFIRM_MS = 2400
 
 /**
  * Splits `text` on `query` so matches can be wrapped in a highlight.
@@ -32,34 +36,28 @@ function highlight(text, query) {
   return parts
 }
 
-const TrashIcon = () => (
-  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-    strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M4 7h16" /><path d="M9 7V5.5A1.5 1.5 0 0 1 10.5 4h3A1.5 1.5 0 0 1 15 5.5V7" />
-    <path d="M6.5 7l.8 11.2A2 2 0 0 0 9.3 20h5.4a2 2 0 0 0 2-1.8L17.5 7" />
-  </svg>
-)
-
 /**
- * TaskCard — a pane of frosted glass resting on the column glass.
+ * TaskCard — one card, after Linear's issue card.
  *
- * The browser's own drag snapshot renders `backdrop-filter` as nothing,
- * which would make a glass card vanish the moment it was picked up, so
- * the drag image is composed by hand from an opaque clone instead.
+ * Key and assignee along the top, the status mark and title beneath,
+ * and the description as a muted line when Display asks for it. Delete
+ * is a two-step press that only appears on hover, so a stray click can
+ * never lose a card.
  */
 export default function TaskCard({
   card,
   columnId,
-  color,
+  status,
+  cardKey,
   query = '',
   landed = false,
+  showDescription = true,
   onDelete,
   onDragStart,
   onDragEnd,
 }) {
   const [dragging, setDragging] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(false)
-  const nodeRef = useRef(null)
   const confirmTimer = useRef(null)
 
   const handleDragStart = (e) => {
@@ -69,25 +67,8 @@ export default function TaskCard({
       sourceColumnId: columnId,
       cardPosition: card.position,
     }))
-
-    const node = nodeRef.current
-    if (node) {
-      const rect = node.getBoundingClientRect()
-      const ghost = node.cloneNode(true)
-      ghost.classList.add('brd-ghost')
-      ghost.style.width = `${rect.width}px`
-      // Mounted inside the .brd root rather than on <body> so it keeps
-      // inheriting the board's font and colour tokens. It's fixed and
-      // parked off-screen, so it costs the layout nothing.
-      ;(node.closest('.brd') || document.body).appendChild(ghost)
-      e.dataTransfer.setDragImage(ghost, e.clientX - rect.left, e.clientY - rect.top)
-      // The snapshot is taken synchronously, so the clone only has to
-      // survive to the end of this frame.
-      requestAnimationFrame(() => ghost.remove())
-    }
-
-    // Deferred so the drag snapshot is captured before the source card
-    // fades into its placeholder state.
+    // Deferred so the browser's drag snapshot is taken before the source
+    // card fades into its placeholder state.
     setTimeout(() => setDragging(true), 0)
     onDragStart?.(card.cardId, columnId)
   }
@@ -105,7 +86,7 @@ export default function TaskCard({
       return
     }
     setConfirmDelete(true)
-    confirmTimer.current = setTimeout(() => setConfirmDelete(false), 2400)
+    confirmTimer.current = setTimeout(() => setConfirmDelete(false), CONFIRM_MS)
   }
 
   const className = [
@@ -113,38 +94,44 @@ export default function TaskCard({
     dragging && 'is-dragging',
     landed && 'is-landed',
     card._isOptimistic && 'is-pending',
+    confirmDelete && 'is-confirming',
   ].filter(Boolean).join(' ')
 
   return (
     <div
-      ref={nodeRef}
       className={className}
-      style={{ '--c': color }}
       draggable
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
       onMouseLeave={() => setConfirmDelete(false)}
     >
-      <div className="brd-card-title">{highlight(card.title, query)}</div>
-
-      {card.description && (
-        <div className="brd-card-desc">{highlight(card.description, query)}</div>
-      )}
-
-      <div className="brd-card-foot">
-        {card.assignedToName
-          ? <Avatar name={card.assignedToName} size={24} />
-          : <span className="brd-card-unassigned" aria-label="Unassigned" />}
-
+      <div className="brd-card-top">
+        <span className="brd-card-key">{cardKey}</span>
         <button
-          className={`brd-card-del${confirmDelete ? ' is-confirming' : ''}`}
+          className="ui-iconbtn is-sm brd-card-del"
           onClick={handleDeleteClick}
           title={confirmDelete ? 'Click again to delete' : 'Delete card'}
           aria-label={confirmDelete ? 'Confirm delete card' : 'Delete card'}
         >
-          <TrashIcon />
+          <TrashIcon size={13} />
         </button>
+        {card.assignedToName
+          ? <Avatar name={card.assignedToName} size={18} />
+          : (
+            <span className="brd-card-unassigned" role="img" aria-label="Unassigned">
+              <UnassignedIcon size={16} />
+            </span>
+          )}
       </div>
+
+      <div className="brd-card-title">
+        <StatusIcon status={status} />
+        <span>{highlight(card.title, query)}</span>
+      </div>
+
+      {showDescription && card.description && (
+        <div className="brd-card-desc">{highlight(card.description, query)}</div>
+      )}
     </div>
   )
 }

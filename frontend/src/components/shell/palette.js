@@ -1,12 +1,11 @@
 /**
- * The dashboard accent spectrum.
+ * The identity spectrum for workspaces and people.
  *
- * Six hues that read clearly against frosted white and stay distinct
- * from one another at chip size. Shared so the stat meters, the
- * workspace table and the board grid tint the same workspace the same
- * colour wherever it appears.
+ * Six muted hues that hold white initials legibly and stay distinct
+ * from one another at dot size. Shared so avatars, workspace dots and
+ * meters tint the same name the same colour wherever it appears.
  */
-export const PALETTE = ['#2E6BF6', '#7C6FF7', '#14B88A', '#E9A13B', '#F0637A', '#38BDF8']
+export const PALETTE = ['#5E6AD2', '#3B8FD9', '#2A9D8F', '#D9822B', '#D6546A', '#8E6DD8']
 
 /**
  * Picks a stable colour for a name.

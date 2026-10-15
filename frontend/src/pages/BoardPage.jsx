@@ -1,35 +1,41 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import { useBoard } from '../hooks/useBoard'
-import KanbanBoard from '../components/KanbanBoard'
-import BoardSidebar from '../components/board/BoardSidebar'
-import BoardTopbar from '../components/board/BoardTopbar'
-import AddTeamMembersModal from '../components/teams/AddTeamMembersModal'
 import { useBoardTeam } from '../hooks/useBoardTeam'
-import './BoardPage.css'
+import AppShell from '../components/shell/AppShell'
+import PageHeader from '../components/shell/PageHeader'
+import SearchField from '../components/shell/SearchField'
+import { BoardIcon, PlusIcon, RefreshIcon, WarnIcon } from '../components/shell/icons'
+import KanbanBoard from '../components/KanbanBoard'
+import BoardMembers from '../components/board/BoardMembers'
+import DisplayMenu from '../components/board/DisplayMenu'
+import AddTeamMembersModal from '../components/teams/AddTeamMembersModal'
+import { getCachedWorkspaces } from '../api/dashboardApi'
+import { BOARD_VIEWS, filterColumnsByView } from '../api/boardStatus'
+import { getHidden, toggleHidden, partitionColumns, getDisplay, setDisplay } from '../api/boardPrefsApi'
+import { useRailNavigate } from '../hooks/useRailNavigate'
+import '../styles/board.css'
 
 /**
- * BoardPage — the board workspace.
+ * BoardPage — one board, laid out like a Linear project board.
  *
- * Frosted panes over a drifting aurora, sharing the dashboard's
- * material and typography. The rail is on the left, the search bar
- * across the top, and the board itself is centred in what's left.
- * All styling lives in BoardPage.css under the .brd scope.
+ * Breadcrumb header, a row of view tabs (All cards / Active / Backlog),
+ * a Filter / Display toolbar, then the columns with a "Hidden columns"
+ * panel at the right. Views, hidden columns and Display options are
+ * this browser's preferences (boardPrefsApi); the board itself comes
+ * from useBoard, live over the socket.
  */
-const Aurora = () => (
-  <div className="brd-aurora" aria-hidden="true">
-    <i className="brd-orb-a" style={{ '--dx': '6%',  '--dy': '5%',  '--dur': '28s' }} />
-    <i className="brd-orb-b" style={{ '--dx': '-5%', '--dy': '7%',  '--dur': '32s', '--delay': '-6s' }} />
-    <i className="brd-orb-c" style={{ '--dx': '4%',  '--dy': '-6%', '--dur': '26s', '--delay': '-12s' }} />
-    <i className="brd-orb-d" style={{ '--dx': '-7%', '--dy': '-4%', '--dur': '34s', '--delay': '-3s' }} />
-  </div>
-)
 
-const WarnIcon = () => (
-  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-    strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M12 3.6 21 19H3z" /><path d="M12 9.5v4.5" /><path d="M12 17h.01" />
-  </svg>
-)
+/** Matches across every card on the board, for the toolbar's count. */
+function countMatches(columns, query) {
+  const q = query.trim().toLowerCase()
+  if (!q) return null
+  const hits = columns.reduce((n, col) =>
+    n + (col.cards ?? []).filter(c =>
+      (c.title ?? '').toLowerCase().includes(q) ||
+      (c.description ?? '').toLowerCase().includes(q)
+    ).length, 0)
+  return `${hits} ${hits === 1 ? 'match' : 'matches'}`
+}
 
 export default function BoardPage({
   boardId,
@@ -38,6 +44,8 @@ export default function BoardPage({
   user,
   onBack,
   backLabel,
+  onOpenBoard,
+  onNavigate,
   onSignOut,
 }) {
   const {
@@ -63,31 +71,17 @@ export default function BoardPage({
   const [query, setQuery] = useState('')
   const [collapsed, setCollapsed] = useState(false)
   const [createColumnOpen, setCreateColumnOpen] = useState(false)
-  const [activeColumnId, setActiveColumnId] = useState(null)
-
-  const columnNodes = useRef(new Map())
+  const [view, setView] = useState('all')
+  const [hiddenIds, setHiddenIds] = useState(() => getHidden(boardId))
+  const [display, setDisplayState] = useState(getDisplay)
 
   useEffect(() => {
-    if (boardId) {
-      loadBoard(boardId)
-      connectBoardSocket(boardId)
-    }
+    if (!boardId) return undefined
+    loadBoard(boardId)
+    connectBoardSocket(boardId)
+    setHiddenIds(getHidden(boardId))
     return () => disconnectBoardSocket()
   }, [boardId, loadBoard, connectBoardSocket, disconnectBoardSocket])
-
-  const registerColumn = useCallback((columnId, node) => {
-    if (node) columnNodes.current.set(columnId, node)
-    else columnNodes.current.delete(columnId)
-  }, [])
-
-  const jumpToColumn = useCallback((columnId) => {
-    setActiveColumnId(columnId)
-    columnNodes.current.get(columnId)?.scrollIntoView({
-      behavior: 'smooth',
-      block: 'nearest',
-      inline: 'center',
-    })
-  }, [])
 
   // The modal collects a name; the hook wants the board it belongs to.
   const handleAddColumn = useCallback(
@@ -95,63 +89,144 @@ export default function BoardPage({
     [addColumn, board, boardId]
   )
 
-  const matchLabel = useMemo(() => {
-    const q = query.trim().toLowerCase()
-    if (!q || !board) return null
-    const hits = (board.columns ?? []).reduce((n, col) =>
-      n + (col.cards ?? []).filter(c =>
-        (c.title ?? '').toLowerCase().includes(q) ||
-        (c.description ?? '').toLowerCase().includes(q)
-      ).length, 0)
-    return `${hits} ${hits === 1 ? 'match' : 'matches'}`
-  }, [query, board])
+  const toggleColumn = useCallback(
+    (columnId) => setHiddenIds(toggleHidden(boardId, columnId)),
+    [boardId]
+  )
+
+  const changeDisplay = useCallback((change) => setDisplayState(setDisplay(change)), [])
+
+  // No sidebar entry is this page, so every routable one leaves it.
+  const { navigate, toast } = useRailNavigate(null, onNavigate)
+
+  const allColumns = useMemo(() => board?.columns ?? [], [board])
+  const { shown, hidden } = useMemo(() => partitionColumns(allColumns, hiddenIds), [allColumns, hiddenIds])
+
+  const columns = useMemo(() => {
+    const inView = filterColumnsByView(shown, view)
+    return display.showEmptyColumns ? inView : inView.filter(c => (c.cards ?? []).length > 0)
+  }, [shown, view, display.showEmptyColumns])
+
+  const matchLabel = useMemo(() => countMatches(allColumns, query), [allColumns, query])
 
   const title = board?.name || boardName || (boardId ? `Board ${boardId}` : 'Board')
 
-  const shell = (children) => (
-    <div className="brd is-peek">
-      <Aurora />
-      {/* Hover targets for the retracted chrome. Each one sits under the
-          panel it reveals, so moving onto the panel keeps it open with no
-          gap to fall through. They are decoration for a pointer only —
-          keyboard users reach the same chrome by tabbing into it, which
-          reveals it through :focus-within. */}
-      <div className="brd-peek-zone brd-peek-left" aria-hidden="true">
-        <span className="brd-peek-grip" />
-      </div>
-      <BoardSidebar
-        board={board}
-        collapsed={collapsed}
-        user={user}
-        activeColumnId={activeColumnId}
-        onJumpToColumn={jumpToColumn}
-        onAddColumn={() => setCreateColumnOpen(true)}
-        onRefresh={() => loadBoard(boardId)}
-        onBack={onBack}
-        backLabel={backLabel}
-        onSignOut={onSignOut}
-      />
-      <div className="brd-main">
-        <div className="brd-peek-zone brd-peek-top" aria-hidden="true">
-          <span className="brd-peek-grip" />
+  const crumbs = [
+    { label: workspace?.name || 'Boards', onClick: onBack },
+    title,
+  ]
+
+  const body = (() => {
+    if (loading && !board) {
+      return <div className="ui-state"><div className="ui-spinner" /><span>Loading board…</span></div>
+    }
+    if (error) {
+      return (
+        <div className="ui-state">
+          <span className="ui-state-icon is-warn"><WarnIcon size={18} /></span>
+          <span className="ui-state-title">Couldn't load this board</span>
+          <span className="ui-state-desc">{error}</span>
+          <button className="ui-btn" onClick={() => loadBoard(boardId)}>Try again</button>
         </div>
-        <BoardTopbar
-          boardName={title}
-          workspaceName={workspace?.name}
-          query={query}
-          onQueryChange={setQuery}
-          collapsed={collapsed}
-          onToggleCollapse={() => setCollapsed(c => !c)}
-          onAddColumn={() => setCreateColumnOpen(true)}
-          matchLabel={matchLabel}
-          isLive={isLive}
-          team={team}
-          onAddPeople={canManage ? () => setAddingPeople(true) : undefined}
-        />
-        {children}
+      )
+    }
+    if (!board) return null
+    return (
+      <KanbanBoard
+        board={board}
+        columns={columns}
+        hiddenColumns={hidden}
+        query={query}
+        showDescriptions={display.showDescriptions}
+        createColumnOpen={createColumnOpen}
+        onCreateColumnOpen={setCreateColumnOpen}
+        onAddColumn={handleAddColumn}
+        onAddCard={addCard}
+        onDeleteCard={deleteCard}
+        onDeleteColumn={deleteColumn}
+        onHideColumn={toggleColumn}
+        onShowColumn={toggleColumn}
+        onMoveCard={moveCard}
+      />
+    )
+  })()
+
+  return (
+    <AppShell
+      active="boards"
+      collapsed={collapsed}
+      user={user}
+      workspaces={getCachedWorkspaces()}
+      activeBoardId={boardId}
+      onNavigate={navigate}
+      onOpenBoard={onOpenBoard}
+      onSignOut={onSignOut}
+    >
+      <PageHeader crumbs={crumbs} collapsed={collapsed} onToggleCollapse={() => setCollapsed(c => !c)}>
+        {/* Only shown when live updates are off. A board that has quietly
+            stopped updating looks identical to a quiet board. */}
+        {!isLive && (
+          <span
+            className="brd-live-off"
+            role="status"
+            title="Reconnecting — other people's changes may not appear yet"
+          >
+            <span className="brd-live-dot" aria-hidden="true" />
+            Offline
+          </span>
+        )}
+        {team && (
+          <BoardMembers
+            teamName={team.name}
+            members={team.members}
+            onAddPeople={canManage ? () => setAddingPeople(true) : undefined}
+          />
+        )}
+      </PageHeader>
+
+      <div className="app-tabs" role="tablist" aria-label="Board views">
+        <span className="app-tab is-static" title={backLabel}>
+          <BoardIcon size={14} />
+          {title}
+        </span>
+        {BOARD_VIEWS.map(v => (
+          <button
+            key={v.id}
+            role="tab"
+            aria-selected={view === v.id}
+            className={`app-tab${view === v.id ? ' is-on' : ''}`}
+            onClick={() => setView(v.id)}
+          >
+            {v.label}
+          </button>
+        ))}
       </div>
-      {/* Rendered here, not inside the top bar: its backdrop-filter would
-          make it the containing block for this fixed overlay. */}
+
+      <div className="app-toolbar">
+        <SearchField
+          value={query}
+          onChange={setQuery}
+          placeholder="Filter cards…"
+          label="Search cards"
+          hotkey
+          className="brd-filter"
+        />
+        {matchLabel && <span className="app-meta">{matchLabel}</span>}
+
+        <div className="app-toolbar-right">
+          <button className="ui-iconbtn" onClick={() => loadBoard(boardId)} aria-label="Refresh" title="Refresh">
+            <RefreshIcon size={15} />
+          </button>
+          <DisplayMenu display={display} onChange={changeDisplay} />
+          <button className="ui-btn" onClick={() => setCreateColumnOpen(true)}>
+            <PlusIcon size={12} />
+            Column
+          </button>
+        </div>
+      </div>
+
+      {body}
+
       {addingPeople && team && (
         <AddTeamMembersModal
           team={team}
@@ -159,47 +234,8 @@ export default function BoardPage({
           onClose={() => setAddingPeople(false)}
         />
       )}
-    </div>
-  )
 
-  if (loading && !board) {
-    return shell(
-      <div className="brd-center">
-        <div className="brd-panel brd-glass">
-          <div className="brd-spinner" />
-          <div className="brd-panel-title">Loading board…</div>
-        </div>
-      </div>
-    )
-  }
-
-  if (error) {
-    return shell(
-      <div className="brd-center">
-        <div className="brd-panel brd-glass">
-          <div className="brd-panel-icon is-warn"><WarnIcon /></div>
-          <div className="brd-panel-title">Couldn't load this board</div>
-          <div className="brd-panel-desc">{error}</div>
-          <button className="brd-btn" onClick={() => loadBoard(boardId)}>Try again</button>
-        </div>
-      </div>
-    )
-  }
-
-  if (!board) return shell(null)
-
-  return shell(
-    <KanbanBoard
-      board={board}
-      query={query}
-      createColumnOpen={createColumnOpen}
-      onCreateColumnOpen={setCreateColumnOpen}
-      onAddColumn={handleAddColumn}
-      onAddCard={addCard}
-      onDeleteCard={deleteCard}
-      onDeleteColumn={deleteColumn}
-      onMoveCard={moveCard}
-      registerColumn={registerColumn}
-    />
+      {toast && <div className="ui-toast" role="status">{toast}</div>}
+    </AppShell>
   )
 }

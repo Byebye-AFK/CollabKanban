@@ -144,11 +144,11 @@ describe('BoardsPage', () => {
     const { container } = render(<BoardsPage user={{ name: 'Swathesh' }} />)
     await screen.findByRole('heading', { name: 'Sprint 24' })
 
-    expect(container.querySelector('.dsh-rail.is-collapsed')).toBeNull()
+    expect(container.querySelector('.app-sidebar.is-collapsed')).toBeNull()
 
     await userEvent.click(screen.getByRole('button', { name: 'Collapse sidebar' }))
 
-    expect(container.querySelector('.dsh-rail.is-collapsed')).toBeInTheDocument()
+    expect(container.querySelector('.app-sidebar.is-collapsed')).toBeInTheDocument()
   })
 
   test('routes rail clicks for other pages but not its own', async () => {

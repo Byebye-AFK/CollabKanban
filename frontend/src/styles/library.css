@@ -1,295 +1,167 @@
 /* ══════════════════════════════════════════════════════════════
-   Library — the grid of cards shared by the Boards and Teams pages.
+   Library lists — the Boards, Starred and Teams pages.
 
-   Both pages present the same thing: everything of one kind that the
-   user can reach, grouped by workspace or laid flat, with a search, a
-   sort and a grouping switch. The arrangement, the card shell and the
-   loading skeleton live here; each page adds only what is peculiar to
-   its own kind of card (the board's progress ring, the team's member
-   meter) in its own stylesheet.
-
-   Depends on styles/glass.css for the tokens and the panel material.
+   Dense rows with hairline dividers, grouped under full-width
+   workspace headers that fold, after Linear's list views. A board
+   row and a team row share one set of columns so the two pages read
+   as one system.
    ═════════════════════════════════════════════════════════════ */
 
-/* ══ Toolbar ═════════════════════════════════════════════════ */
-.lib-toolbar { margin-bottom: 18px; }
-
-/* Segmented control — one recessed well, the active half raised out of
-   it, so the pair reads as one switch rather than two buttons. */
-.lib-viewtoggle {
-  display: flex;
-  gap: 3px;
-  padding: 3px;
-  border-radius: 12px;
-  background: rgba(16, 19, 31, 0.05);
-  border: 1px solid var(--glass-line-2);
-}
-.lib-viewbtn {
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  height: 30px;
-  padding: 0 12px;
-  border-radius: 9px;
-  font-size: 13px;
-  font-weight: 550;
-  color: var(--ink-3);
-  white-space: nowrap;
-  transition: background 180ms ease, color 180ms ease, box-shadow 180ms ease;
-}
-.lib-viewbtn:hover { color: var(--ink); }
-.lib-viewbtn.is-on {
-  background: linear-gradient(150deg, #fff, rgba(255, 255, 255, 0.82));
-  color: var(--blue);
+.lib-toolbar-title {
+  font-size: var(--fs-13);
   font-weight: 600;
-  box-shadow: var(--lift-1), inset 0 1px 0 #fff;
-}
-
-/* ══ Grid ════════════════════════════════════════════════════
-   auto-fill rather than a fixed count: the grid reflows on its own
-   at every width, so the page needs no per-breakpoint column rules. */
-.lib-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(232px, 1fr));
-  gap: 14px;
-}
-
-/* ══ Board card ══════════════════════════════════════════════ */
-.lib-card {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  padding: 16px 17px 14px;
-  min-height: 178px;
-  border-radius: var(--r-md);
-  overflow: hidden;
-  cursor: pointer;
-  transition:
-    transform 260ms cubic-bezier(.2,.8,.3,1),
-    box-shadow 260ms ease,
-    border-color 200ms ease;
-}
-
-/* A card is glass inside glass: the panel behind it has already frosted
-   the aurora, so wearing the same full-strength material a second time
-   composited to near-solid white and the cards read as tiles sitting on
-   the page rather than panes set into it. Lighter film, softer edge,
-   shallower shadow — the hover lift below is what makes a card assert
-   itself. Specificity 0,2,0 so it wins over .dsh-glass whatever order
-   the bundler emits the two stylesheets in. */
-.lib-card.dsh-glass {
-  background: linear-gradient(150deg, rgba(255, 255, 255, 0.18), var(--glass-0));
-  -webkit-backdrop-filter: saturate(150%) blur(10px);
-          backdrop-filter: saturate(150%) blur(10px);
-  border-color: rgba(255, 255, 255, 0.30);
-  box-shadow: var(--lift-1);
-}
-
-/* A wash of the workspace's own colour along the top edge — enough to
-   group a set at a glance without tinting the whole card. */
-.lib-card::before {
-  content: '';
-  position: absolute;
-  inset: 0 0 auto;
-  height: 4px;
-  background: linear-gradient(90deg, var(--tint, var(--blue)), transparent 92%);
-  opacity: 0.9;
-  transition: opacity 220ms ease;
-}
-
-.lib-card:hover,
-.lib-card:focus-visible {
-  transform: translateY(-3px);
-  box-shadow: var(--lift-hover), var(--inner-top);
-  border-color: #fff;
-  outline: none;
-}
-.lib-card:focus-visible { box-shadow: var(--lift-hover), var(--inner-top), 0 0 0 3px rgba(46,107,246,0.35); }
-.lib-card:hover::before { opacity: 1; }
-.lib-card:active { transform: translateY(-1px); }
-
-/* Holds the card's one status element — a board's ring, a team's member
-   count — which keeps the top-right slot it has always sat in. */
-.lib-card-head {
-  display: flex;
-  align-items: flex-start;
-  justify-content: flex-end;
-  gap: 12px;
-  margin-bottom: 12px;
-}
-
-/* Sits in the slot at the head's left; `margin-right: auto` is what
-   holds the ring out at the right edge without the head needing to know
-   whether a star is there at all. */
-.lib-star {
-  display: grid;
-  place-items: center;
-  flex: none;
-  width: 32px;
-  height: 32px;
-  margin-right: auto;
-  border-radius: 10px;
-  background: transparent;
-  color: var(--ink-4);
-  cursor: pointer;
-  transition: background var(--t, 140ms) ease, color 140ms ease, transform 140ms ease;
-}
-.lib-star:hover { background: rgba(16, 19, 31, 0.06); color: var(--ink-2); }
-.lib-star:active { transform: scale(0.92); }
-.lib-star.is-on { color: var(--amber); }
-.lib-star:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
-
-@media (prefers-reduced-motion: reduce) {
-  .lib-star { transition: none; }
-  .lib-star:active { transform: none; }
-}
-
-.lib-name {
-  margin: 0;
-  font-family: var(--display);
-  font-size: 16.5px;
-  font-weight: 600;
-  letter-spacing: -0.02em;
-  line-height: 1.25;
-  color: var(--ink);
-  /* Two lines, then ellipsis — a long board name must not push the
-     footer out of alignment with its neighbours. */
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-}
-
-.lib-ws-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  align-self: flex-start;
-  margin-top: 8px;
-  max-width: 100%;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.lib-ws-chip i { flex: none; width: 6px; height: 6px; border-radius: 50%; }
-
-/* The shared stack overlaps by 8px, which is right for the workspace
-   table's 28px avatars but clips the second initial at the 26px used
-   here. A shallower overlap keeps both letters readable. */
-.lib-card-foot .dsh-stack > * { margin-left: -5px; }
-.lib-card-foot .dsh-stack > *:first-child { margin-left: 0; }
-.lib-card-foot .dsh-more { width: 26px; height: 26px; }
-
-.lib-card-foot {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  margin-top: auto;
-  padding-top: 14px;
-}
-.lib-meta {
-  font-size: 11.5px;
-  font-weight: 500;
-  color: var(--ink-4);
-  text-align: right;
+  color: var(--text-1);
   white-space: nowrap;
 }
-.lib-nomembers { font-size: 11.5px; font-weight: 500; color: var(--ink-4); }
+.lib-sortmenu { top: calc(100% + 6px); right: 0; }
 
-/* ══ Workspace groups ════════════════════════════════════════ */
-.lib-groups { display: flex; flex-direction: column; gap: 10px; }
-.lib-group + .lib-group { border-top: 1px solid var(--hairline); padding-top: 10px; }
+.lib-banner { margin: 12px 16px 0; }
 
-.lib-group-heading { margin: 0; font-weight: inherit; font-size: inherit; }
+/* ── Groups ─────────────────────────────────────────────────── */
+.lib-groups { display: flex; flex-direction: column; }
+
+.lib-group-heading { font-size: inherit; font-weight: inherit; }
 
 .lib-group-head {
+  position: sticky;
+  top: 0;
+  z-index: 2;
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   width: 100%;
-  padding: 9px 10px;
-  margin-bottom: 4px;
-  border-radius: 11px;
-  text-align: left;
-  transition: background 160ms ease;
-}
-.lib-group-head:hover { background: rgba(255, 255, 255, 0.6); }
-
-.lib-group-chevron {
-  flex: none;
-  color: var(--ink-4);
-  transition: transform 240ms cubic-bezier(.2,.8,.3,1);
-}
-.lib-group-head.is-open .lib-group-chevron { transform: rotate(90deg); }
-
-.lib-group-dot { flex: none; width: 8px; height: 8px; border-radius: 50%; }
-.lib-group-name {
-  font-family: var(--display);
-  font-size: 15px;
-  font-weight: 600;
-  letter-spacing: -0.02em;
-  color: var(--ink);
-}
-.lib-group-count {
-  margin-left: auto;
-  font-size: 12px;
+  height: 36px;
+  padding: 0 16px 0 12px;
+  border-bottom: 1px solid var(--line);
+  background: var(--bg-subtle);
+  color: var(--text-1);
+  font-size: var(--fs-13);
   font-weight: 500;
-  color: var(--ink-4);
+  text-align: left;
 }
+.lib-group-head:hover { background: #EFEFF1; }
+.lib-group-chevron { color: var(--text-3); transition: transform var(--dur-2) var(--ease-out); }
+.lib-group-head.is-open .lib-group-chevron { transform: rotate(90deg); }
+.lib-group-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.lib-group-count { color: var(--text-3); font-weight: 400; }
 
-/* Collapsing on grid-template-rows lets the panel animate to its own
-   natural height without anyone measuring it first. */
+/* 0fr → 1fr lets the body animate to its natural height. */
 .lib-group-body {
   display: grid;
   grid-template-rows: 0fr;
-  transition: grid-template-rows 320ms cubic-bezier(.2,.8,.3,1);
+  transition: grid-template-rows var(--dur-3) var(--ease-out);
 }
 .lib-group-body.is-open { grid-template-rows: 1fr; }
-.lib-group-inner { overflow: hidden; }
-/* Padding lives on the inner box so a hover lift is not clipped by it. */
-.lib-group-body.is-open .lib-group-inner { overflow: visible; }
-.lib-group-inner > .lib-grid { padding: 6px 2px 10px; }
+.lib-group-inner { min-height: 0; overflow: hidden; }
 
-/* ══ Skeleton ════════════════════════════════════════════════ */
-.lib-skeleton { cursor: default; pointer-events: none; }
-.lib-skeleton::before { display: none; }
-.lib-sk {
-  display: block;
-  border-radius: 7px;
-  background: linear-gradient(
-    100deg,
-    rgba(16, 19, 31, 0.055) 30%,
-    rgba(16, 19, 31, 0.10) 50%,
-    rgba(16, 19, 31, 0.055) 70%
-  );
-  background-size: 260% 100%;
-  animation: lib-shimmer 1500ms ease-in-out infinite;
+/* ── Rows ───────────────────────────────────────────────────── */
+.lib-grid { display: flex; flex-direction: column; }
+
+.lib-card {
+  display: grid;
+  grid-template-columns: 20px minmax(120px, max-content) minmax(0, 1fr) auto 56px 76px 24px;
+  align-items: center;
+  column-gap: 12px;
+  min-height: 44px;
+  padding: 0 16px 0 20px;
+  border-bottom: 1px solid var(--line);
+  background: var(--bg-panel);
+  color: var(--text-2);
+  cursor: pointer;
+  transition: background var(--dur-1);
 }
-.lib-sk-mark  { width: 38px; height: 38px; border-radius: 12px; }
-.lib-sk-ring  { width: 44px; height: 44px; border-radius: 50%; }
-.lib-sk-line  { width: 72%; height: 15px; margin-bottom: 10px; }
-.lib-sk-chip  { width: 46%; height: 19px; border-radius: 99px; }
-.lib-sk-stack { width: 74px; height: 26px; border-radius: 99px; }
-.lib-sk-meta  { width: 58px; height: 11px; }
+.lib-card:hover { background: var(--bg-hover); }
+.lib-card:focus-visible { box-shadow: inset 0 0 0 2px rgba(94, 106, 210, 0.45); }
 
-@keyframes lib-shimmer {
-  from { background-position: 160% 0; }
-  to   { background-position: -60% 0; }
-}
+.lib-icon { display: grid; place-items: center; color: var(--text-3); }
 
-/* ══ Responsive ══════════════════════════════════════════════ */
-@media (max-width: 560px) {
-  .lib-grid { grid-template-columns: 1fr; }
-  .lib-viewbtn span { display: none; }
-  .lib-viewbtn { padding: 0 10px; }
+.lib-name {
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-size: var(--fs-13);
+  font-weight: 500;
+  color: var(--text-1);
 }
 
-/* ══ Reduced motion ══════════════════════════════════════════ */
-@media (prefers-reduced-motion: reduce) {
-  .lib-card:hover,
-  .lib-card:focus-visible,
-  .lib-card:active { transform: none; }
-  .lib-sk { animation: none; }
-  .lib-group-body { transition: none; }
-  .lib-group-head.is-open .lib-group-chevron { transition: none; }
+.lib-ws-chip { justify-self: start; }
+
+.lib-meta {
+  font-size: var(--fs-12);
+  color: var(--text-3);
+  white-space: nowrap;
+  text-align: right;
+}
+
+.lib-members { justify-self: end; }
+.lib-nomembers { font-size: var(--fs-12); color: var(--text-4); white-space: nowrap; }
+
+.lib-star { color: var(--text-4); }
+.lib-star:hover { color: var(--text-2); }
+.lib-star.is-on { color: var(--warning); }
+.lib-star.is-on:hover { color: var(--warning); background: var(--bg-hover); }
+
+/* ── Progress ring ──────────────────────────────────────────── */
+.bds-ring {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  justify-self: end;
+}
+.bds-ring svg { transform: rotate(-90deg); }
+.bds-ring-arc { animation: bds-arc 900ms var(--ease-out) both; animation-delay: var(--md, 0ms); }
+.bds-ring-text { font-size: var(--fs-12); color: var(--text-3); font-variant-numeric: tabular-nums; }
+@keyframes bds-arc { from { stroke-dashoffset: var(--arc); } }
+
+/* ── Teams ──────────────────────────────────────────────────── */
+.tms-card { cursor: default; grid-template-columns: 20px minmax(120px, max-content) minmax(0, 1fr) auto 76px 56px auto; }
+
+.tms-count {
+  font-size: var(--fs-12);
+  color: var(--text-2);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  text-align: right;
+}
+.tms-count i { margin-left: 4px; font-style: normal; color: var(--text-3); }
+
+.tms-meter {
+  position: relative;
+  height: 4px;
+  border-radius: var(--radius-full);
+  background: var(--bg-subtle);
+  overflow: hidden;
+}
+.tms-meter i {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: var(--w);
+  border-radius: inherit;
+  background: var(--text-3);
+  animation: tms-grow 700ms var(--ease-out) both;
+  animation-delay: var(--md, 0ms);
+}
+@keyframes tms-grow { from { width: 0; } }
+
+.tms-role { text-transform: capitalize; }
+.tms-add { height: 24px; padding: 0 8px; font-size: var(--fs-12); }
+
+/* ── Skeleton ───────────────────────────────────────────────── */
+.lib-skeleton { cursor: default; animation: ui-rise var(--dur-3) var(--ease-out) both; animation-delay: var(--in); }
+.lib-skeleton:hover { background: var(--bg-panel); }
+.lib-sk-icon { width: 15px; height: 15px; }
+.lib-sk-name { width: 140px; height: 10px; }
+.lib-sk-chip { width: 90px; height: 18px; border-radius: var(--radius-full); }
+.lib-sk-meta { grid-column: 4 / -1; justify-self: end; width: 120px; height: 10px; }
+
+@media (max-width: 900px) {
+  .lib-card,
+  .tms-card { grid-template-columns: 20px minmax(0, 1fr) auto 24px; }
+  .lib-ws-chip,
+  .lib-members,
+  .lib-ring-gap,
+  .bds-ring,
+  .tms-meter,
+  .tms-role { display: none; }
 }
