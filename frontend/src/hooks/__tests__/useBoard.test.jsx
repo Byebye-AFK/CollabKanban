@@ -66,7 +66,31 @@ describe('moveCard', () => {
     })
 
     // Assert
-    expect(apiMoveCard).toHaveBeenCalledWith(100, 20, 1000)
+    expect(apiMoveCard).toHaveBeenCalledWith(100, 20, 1000, undefined)
+  })
+
+  test('sends the version the client last saw', async () => {
+    const fixture = boardFixture()
+    fixture.columns[0].cards[0] = { ...fixture.columns[0].cards[0], version: 3 }
+    getBoard.mockResolvedValue(fixture)
+    const result = await renderLoadedBoard()
+
+    await act(async () => {
+      await result.current.moveCard(100, 10, 20, 0)
+    })
+
+    expect(apiMoveCard).toHaveBeenCalledWith(100, 20, 1000, 3)
+  })
+
+  test('stores the version from the move response on the card', async () => {
+    const result = await renderLoadedBoard()
+    apiMoveCard.mockResolvedValue({ cardId: 100, title: 'Card A', position: 1000, version: 4 })
+
+    await act(async () => {
+      await result.current.moveCard(100, 10, 20, 0)
+    })
+
+    expect(columnById(result.current.board, 20).cards[0].version).toBe(4)
   })
 
   test('applies the move optimistically before the server answers', async () => {

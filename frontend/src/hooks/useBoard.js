@@ -178,6 +178,12 @@ const moveCard = useCallback(async (
 ) => {
   const snapshot = board
 
+// The version this client last saw, so the server can reject a stale move.
+const version = board.columns
+  .find(c => c.columnId === sourceColumnId)
+  ?.cards.find(c => c.cardId === cardId)
+  ?.version
+
 const targetColumn = board.columns.find(
   c => c.columnId === targetColumnId
 )
@@ -279,11 +285,26 @@ try {
   // on. The server broadcasts the saved result, which is what reaches the
   // other clients — and comes back to us as a refetch we can ignore the
   // cost of. No refetch here: the optimistic state above already matches.
-  await apiMoveCard(
+  const saved = await apiMoveCard(
     cardId,
     targetColumnId,
-    newPosition
+    newPosition,
+    version
   )
+
+  // Keep the server's new version, so the next move of this card is not
+  // mistaken for a stale one.
+  if (saved?.version != null) {
+    setBoard(prev => ({
+      ...prev,
+      columns: prev.columns.map(col => ({
+        ...col,
+        cards: col.cards.map(c =>
+          c.cardId === cardId ? { ...c, version: saved.version } : c
+        ),
+      })),
+    }))
+  }
 
 } catch (err) {
 

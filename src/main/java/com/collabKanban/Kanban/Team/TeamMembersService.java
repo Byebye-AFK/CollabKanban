@@ -4,65 +4,43 @@ import com.collabKanban.Kanban.DTO.TeamMemberCreateReq;
 import com.collabKanban.Kanban.Response.TeamMemberRes;
 import com.collabKanban.Kanban.UserSpace.UserRepo;
 import com.collabKanban.Kanban.UserSpace.Users;
-import com.collabKanban.Kanban.WorkSpace.Role;
 import com.collabKanban.Kanban.WorkSpace.Workspace;
+import com.collabKanban.Kanban.WorkSpace.WorkspaceAccess;
 import com.collabKanban.Kanban.WorkSpace.WorkspaceMemberRepo;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
-import java.util.EnumSet;
-import java.util.List;
-import java.util.Set;
-
 @Service
 public class TeamMembersService {
 
     private final UserRepo userRepo;
-
     private final TeamRepo teamRepo;
-
     private final TeamMemberRepo repo;
-
     private final WorkspaceMemberRepo workspaceMemberRepo;
+    private final WorkspaceAccess access;
 
-    public TeamMembersService(TeamMemberRepo repo,TeamRepo teamRepo, UserRepo userRepo, WorkspaceMemberRepo workspaceMemberRepo){
-        this.repo=repo;
-        this.teamRepo=teamRepo;
-        this.userRepo=userRepo;
-        this.workspaceMemberRepo=workspaceMemberRepo;
-
+    public TeamMembersService(TeamMemberRepo repo, TeamRepo teamRepo, UserRepo userRepo,
+                              WorkspaceMemberRepo workspaceMemberRepo, WorkspaceAccess access) {
+        this.repo = repo;
+        this.teamRepo = teamRepo;
+        this.userRepo = userRepo;
+        this.workspaceMemberRepo = workspaceMemberRepo;
+        this.access = access;
     }
-    // Only a workspace's owners and admins may change who is on its teams.
-    private static final Set<Role> ROLES_THAT_MANAGE_TEAMS = EnumSet.of(Role.OWNER, Role.ADMIN);
 
+    // ── Adding a team member ───────────────────────────────────
+    // Only the workspace's owners and admins may change who is on its
+    // teams, and only people already in the workspace can join a team.
     @Transactional
-    public TeamMemberRes addMembers(TeamMemberCreateReq req, String callerEmail){
-        if (req == null || req.getUserId() == null || req.getTeamId() == null) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "userId and teamId are required");
-        }
+    public TeamMemberRes addMembers(TeamMemberCreateReq req) {
+        requireIds(req);
+        Team team = findTeam(req.getTeamId());
+        Workspace workspace = workspaceOf(team);
+        access.requireManager(workspace);
 
-        Team team = teamRepo.findByteamId(req.getTeamId());
-        if (team == null) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Team not found");
-        }
-
-        Workspace workspace = team.getWorkspaces();
-        if (workspace == null) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Team is not attached to a workspace");
-        }
-
-        Users caller = userRepo.findByemail(callerEmail);
-        Role callerRole = caller == null ? null : workspaceMemberRepo.getRoleOfMember(caller, workspace);
-        if (!ROLES_THAT_MANAGE_TEAMS.contains(callerRole)) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only workspace owners and admins can add team members");
-        }
-
-        Users user = userRepo.findByuserId(req.getUserId());
-        if (user == null) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found");
-        }
+        Users user = findUser(req.getUserId());
         if (workspaceMemberRepo.getRoleOfMember(user, workspace) == null) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, user.getName() + " is not a member of this workspace");
         }
@@ -78,38 +56,70 @@ public class TeamMembersService {
         team.setCount(repo.findByteams(team).size());
         teamRepo.save(team);
 
-        TeamMemberRes res = new TeamMemberRes();
-        res.setTeamId(team.getTeamId());
-        res.setUserId(user.getUserId());
-        return res;
+        return toRes(user.getUserId(), team.getTeamId());
     }
 
-    public TeamMemberRes removeMembers(TeamMemberCreateReq req){
-        TeamMemberRes res=new TeamMemberRes();
-        res.setUserId(req.getUserId());
-        res.setTeamId(req.getTeamId());
+    // ── Removing a team member ─────────────────────────────────
+    // Same manager rule as adding. The count is recomputed from the rows
+    // that remain so it can never drift from the real membership.
+    @Transactional
+    public TeamMemberRes removeMembers(TeamMemberCreateReq req) {
+        requireIds(req);
+        Team team = findTeam(req.getTeamId());
+        Users user = findUser(req.getUserId());
+        access.requireManager(workspaceOf(team));
 
-        Users user=userRepo.findByuserId(req.getUserId());
-        Team team=teamRepo.findByteamId(req.getTeamId());
-        teamRepo.deleteByUserandTeam(user, team);
-
-        return res;
-
-    }
-
-
-
-
-
-    public List<TeamMembers> getMembers(Long teamId){
-        Team team=teamRepo.findByteamId(teamId);
-
-        List<TeamMembers> members=repo.findByteams(team);
-
-        if (members !=null){
-            return members;
+        if (!repo.existsByMembersAndTeams(user, team)) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, user.getName() + " is not on " + team.getName());
         }
-        return null;
+
+        // The bulk delete clears the persistence context, so the team is
+        // re-read before its count is written back.
+        teamRepo.deleteByUserandTeam(user, team);
+        int remaining = repo.findByteams(team).size();
+        Team fresh = findTeam(req.getTeamId());
+        fresh.setCount(remaining);
+        teamRepo.save(fresh);
+
+        return toRes(user.getUserId(), fresh.getTeamId());
     }
 
+    // ── Helpers ────────────────────────────────────────────────
+
+    private static void requireIds(TeamMemberCreateReq req) {
+        if (req == null || req.getUserId() == null || req.getTeamId() == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "userId and teamId are required");
+        }
+    }
+
+    private Team findTeam(Long teamId) {
+        Team team = teamRepo.findByteamId(teamId);
+        if (team == null) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Team not found");
+        }
+        return team;
+    }
+
+    private Users findUser(Long userId) {
+        Users user = userRepo.findByuserId(userId);
+        if (user == null) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found");
+        }
+        return user;
+    }
+
+    private static Workspace workspaceOf(Team team) {
+        Workspace workspace = team.getWorkspaces();
+        if (workspace == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Team is not attached to a workspace");
+        }
+        return workspace;
+    }
+
+    private static TeamMemberRes toRes(Long userId, Long teamId) {
+        TeamMemberRes res = new TeamMemberRes();
+        res.setUserId(userId);
+        res.setTeamId(teamId);
+        return res;
+    }
 }

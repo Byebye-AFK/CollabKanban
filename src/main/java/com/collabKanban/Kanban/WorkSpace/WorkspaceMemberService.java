@@ -3,50 +3,63 @@ package com.collabKanban.Kanban.WorkSpace;
 import com.collabKanban.Kanban.Response.RoleResponse;
 import com.collabKanban.Kanban.UserSpace.UserRepo;
 import com.collabKanban.Kanban.UserSpace.Users;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
 
 @Service
 public class WorkspaceMemberService {
 
-     private final WorkspaceMemberRepo workspaceMemberRepo;
-     private final WorkspaceRepo workspaceRepo;
-     private final UserRepo userRepo;
-    public WorkspaceMemberService( WorkspaceMemberRepo workspaceMemberRepo,UserRepo userRepo, WorkspaceRepo workspaceRepo  ){
-        this.workspaceMemberRepo=workspaceMemberRepo;
-        this.workspaceRepo=workspaceRepo;
-        this.userRepo=userRepo;
+    private final WorkspaceMemberRepo workspaceMemberRepo;
+    private final WorkspaceRepo workspaceRepo;
+    private final UserRepo userRepo;
+    private final WorkspaceAccess access;
 
-
-
-
+    public WorkspaceMemberService(WorkspaceMemberRepo workspaceMemberRepo, UserRepo userRepo,
+                                  WorkspaceRepo workspaceRepo, WorkspaceAccess access) {
+        this.workspaceMemberRepo = workspaceMemberRepo;
+        this.workspaceRepo = workspaceRepo;
+        this.userRepo = userRepo;
+        this.access = access;
     }
 
-    public RoleResponse addMembership(Long workSpaceId,Long userId, Role role){
-        WorkspaceMembers member;
-        Workspace space;
-        Users user;
-        try {
-            member = new WorkspaceMembers();
-            space = workspaceRepo.getReferenceById(workSpaceId);
-            user = userRepo.getReferenceById(userId);
-        } catch (Exception e) {
-            throw new RuntimeException(e);
+    // ── Granting a membership ──────────────────────────────────
+    // Only owners and admins may add people, and only an owner may make
+    // another owner, so nobody can promote themselves past their role.
+    // The duplicate pre-check gives a clear 409; the table's unique
+    // constraint stays as the backstop for a concurrent request.
+    @Transactional
+    public RoleResponse addMembership(Long workSpaceId, Long userId, Role role) {
+        if (workSpaceId == null || userId == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "workSpaceId and userId are required");
+        }
+        if (role == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "role is required");
         }
 
+        Workspace workspace = workspaceRepo.findById(workSpaceId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Workspace not found"));
 
-        member.setWorkspace(space);
-            member.setUser(user);
-            member.setRole(role);
+        Role callerRole = access.requireManager(workspace);
+        if (role == Role.OWNER && callerRole != Role.OWNER) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only an owner can make someone an owner");
+        }
 
-            workspaceMemberRepo.save(member);
+        Users user = userRepo.findById(userId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
 
+        if (workspaceMemberRepo.getRoleOfMember(user, workspace) != null) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    user.getName() + " is already a member of this workspace");
+        }
 
+        WorkspaceMembers member = new WorkspaceMembers();
+        member.setWorkspace(workspace);
+        member.setUser(user);
+        member.setRole(role);
+        workspaceMemberRepo.save(member);
 
-
-
-        return  new RoleResponse(userId,workSpaceId,role);
+        return new RoleResponse(user.getUserId(), workspace.getWorkspaceId(), role);
     }
-
-
-
 }

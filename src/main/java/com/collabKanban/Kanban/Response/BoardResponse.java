@@ -1,7 +1,5 @@
 package com.collabKanban.Kanban.Response;
 
-import com.collabKanban.Kanban.Boards.Colum;
-import com.collabKanban.Kanban.Boards.ColumRepo;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -12,6 +10,7 @@ import java.util.List;
 public class BoardResponse {
     private Long teamId;
     private Long boardId;
+    private Long position;
     private String name;
     private List<ColumResponse> columns;
 

@@ -1,6 +1,5 @@
 package com.collabKanban.Kanban.Response;
 
-import com.collabKanban.Kanban.Boards.Colum;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -12,5 +11,7 @@ public class CardResponse {
     private String description;
     private Long position;
     private Long assignedTo;
+    // @Version of the card; the client echoes it on move so stale copies are rejected with 409.
+    private Long version;
 
 }

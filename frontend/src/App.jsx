@@ -55,10 +55,14 @@ export default function App() {
   // Set when the rail asked for a dashboard section from another page;
   // the dashboard scrolls there once, then clears it.
   const [pendingSection, setPendingSection] = useState(null)
+  // True from a fresh sign-in until the dashboard has played its greeting,
+  // so the animation runs on login and not every time you return to it.
+  const [isWelcomePending, setIsWelcomePending] = useState(false)
 
   useEffect(() => {
     const oauthUser = consumeOauthCallback()
     setUser(oauthUser || getStoredUser())
+    if (oauthUser) setIsWelcomePending(true)
   }, [])
 
   /**
@@ -106,6 +110,7 @@ export default function App() {
 
   const handleLogin = (signedInUser) => {
     setUser(signedInUser)
+    setIsWelcomePending(true)
     setLoginOpen(false)
   }
 
@@ -194,6 +199,8 @@ export default function App() {
             onSignOut={signOut}
             initialSection={pendingSection}
             onSectionShown={() => setPendingSection(null)}
+            animateGreeting={isWelcomePending}
+            onGreeted={() => setIsWelcomePending(false)}
           />
         </main>
       </div>

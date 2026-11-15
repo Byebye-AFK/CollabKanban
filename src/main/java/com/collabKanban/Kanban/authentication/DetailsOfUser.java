@@ -14,6 +14,11 @@ public class DetailsOfUser implements UserDetails {
 
     Users user;
 
+    // WorkspaceAccess reads the caller from here, so it never trusts an id sent in a request body.
+    public Users getUser() {
+        return user;
+    }
+
     public DetailsOfUser(Users user){
         this.user=user;
 

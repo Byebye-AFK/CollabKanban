@@ -1,7 +1,9 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import AppShell from '../components/shell/AppShell'
 import PageHeader from '../components/shell/PageHeader'
-import SearchField from '../components/shell/SearchField'
+import GooeyInput from '../components/ui/GooeyInput'
+import EncryptedText from '../components/ui/EncryptedText'
+import { useDecryptTree } from '../hooks/useDecryptTree'
 import { BoardIcon, Chevron, CheckIcon, CopyIcon, InviteIcon, WarnIcon } from '../components/shell/icons'
 import Modal from '../components/ui/Modal'
 import StatCards from '../components/dashboard/StatCards'
@@ -52,7 +54,13 @@ export default function DashboardPage({
   onSignOut,
   initialSection = null,
   onSectionShown,
+  animateGreeting = false,
+  onGreeted,
 }) {
+  // Decided once at mount: the parent clears its flag right after, and the
+  // animation must not be cut short by that.
+  const [shouldAnimateGreeting] = useState(animateGreeting)
+  useEffect(() => { if (shouldAnimateGreeting) onGreeted?.() }, []) // eslint-disable-line react-hooks/exhaustive-deps
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(true)
   const [query, setQuery] = useState('')
@@ -74,6 +82,8 @@ export default function DashboardPage({
     { id: 'workspaces', ref: listRef },
   ], [])
   const nav = useScrollSpy(scrollRef, sections, !loading && !!data)
+  // On a fresh login the whole page decrypts, not just the greeting.
+  useDecryptTree(scrollRef, shouldAnimateGreeting && !loading && !!data)
 
   useEffect(() => {
     let alive = true
@@ -189,7 +199,9 @@ export default function DashboardPage({
       <div className="app-scroll" ref={scrollRef}>
         <div className="app-content">
           <header className="ui-in">
-            <h1 className="app-title">{greeting()}, {firstName}</h1>
+            <h1 className="app-title" data-no-decrypt>
+              <EncryptedText text={`${greeting()}, ${firstName}`} animate={shouldAnimateGreeting} />
+            </h1>
             <p className="app-subtitle">Here's where your workspaces stand.</p>
           </header>
 
@@ -239,7 +251,7 @@ export default function DashboardPage({
         collapsed={collapsed}
         onToggleCollapse={() => setCollapsed(c => !c)}
       >
-        <SearchField
+        <GooeyInput
           value={query}
           onChange={setQuery}
           placeholder="Search workspaces, teams, boards…"

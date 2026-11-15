@@ -1,0 +1,10 @@
+# Build output
+dist/
+
+# Test coverage reports
+coverage/
+
+# macOS
+.DS_Store
+
+

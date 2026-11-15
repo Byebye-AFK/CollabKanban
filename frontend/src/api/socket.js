@@ -6,8 +6,11 @@ import { Client } from '@stomp/stompjs'
 // about other people's changes.
 //
 // Matches the backend's registry.addEndpoint("/ws") (no SockJS) and
-// enableSimpleBroker("/topic").
+// enableSimpleBroker("/topic"). The backend's StompAuthInterceptor rejects a
+// CONNECT without a valid bearer token and a SUBSCRIBE to a board the user
+// is not a member of.
 const WS_URL = 'ws://localhost:8080/ws'
+const TOKEN_KEY = 'jwt_token'
 const RECONNECT_DELAY_MS = 5000
 const HEARTBEAT_MS = 10000
 
@@ -70,6 +73,21 @@ function handleDisconnect() {
   notifyConnection(false)
 }
 
+// ── Auth headers ────────────────────────────────────────────────
+// Read on every (re)connect rather than once, so a reconnect after a fresh
+// sign-in carries the new token instead of a stale or missing one.
+function readToken() {
+  try {
+    return localStorage.getItem(TOKEN_KEY)
+  } catch {
+    return null
+  }
+}
+
+export function buildConnectHeaders(token = readToken()) {
+  return token ? { Authorization: `Bearer ${token}` } : {}
+}
+
 function getClient() {
   if (client) return client
 
@@ -78,6 +96,9 @@ function getClient() {
     reconnectDelay: RECONNECT_DELAY_MS,
     heartbeatIncoming: HEARTBEAT_MS,
     heartbeatOutgoing: HEARTBEAT_MS,
+    beforeConnect: (stompClient) => {
+      stompClient.connectHeaders = buildConnectHeaders()
+    },
   })
 
   client.onConnect = handleConnect

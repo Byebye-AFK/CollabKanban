@@ -138,34 +138,112 @@
   color: var(--text-4);
 }
 
-/* ── Search field ───────────────────────────────────────────── */
-.ui-search {
+/* ── Encrypted text ─────────────────────────────────────────
+   Glyphs that have not resolved yet read as noise, not as content. */
+.enc-glyph { color: var(--text-4); }
+
+/* ── Gooey input ────────────────────────────────────────────
+   A round icon that pulls a field out of itself. The goo filter lives on
+   .gooey-layer, a mirror of the real flex layout that holds only blobs, so
+   the text and icon above it stay sharp. Blob fills must stay opaque: the
+   filter thresholds alpha. */
+.gooey-input {
+  --gooey-size: 28px;
+  position: relative;
   display: flex;
   align-items: center;
-  gap: 6px;
-  height: 28px;
-  min-width: 0;
-  padding: 0 8px;
-  border-radius: var(--radius-sm);
+  flex-shrink: 0;
+  height: var(--gooey-size);
+  width: var(--gooey-size);
   color: var(--text-3);
-  transition: background var(--dur-1), box-shadow var(--dur-1);
+  transition: width var(--dur-3) var(--ease-out), gap var(--dur-3) var(--ease-out);
 }
-.ui-search:hover { background: var(--bg-hover); }
-.ui-search:focus-within {
-  background: var(--bg-surface);
-  box-shadow: 0 0 0 1px var(--line-strong);
+.gooey-input.is-open {
+  width: var(--gooey-w, 280px);
+  gap: 9px;
+  color: var(--text-1);
 }
-.ui-search input {
+.gooey-input.is-end,
+.gooey-input.is-end .gooey-layer { flex-direction: row-reverse; }
+
+.gooey-defs { position: absolute; width: 0; height: 0; pointer-events: none; }
+
+.gooey-layer {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  pointer-events: none;
+  transition: gap var(--dur-3) var(--ease-out);
+}
+.gooey-input.is-open .gooey-layer { gap: 9px; }
+
+.gooey-blob {
+  height: var(--gooey-size);
+  border-radius: var(--radius-full);
+  background: var(--line);
+  transition: background var(--dur-2);
+}
+.gooey-dot { flex: none; width: var(--gooey-size); }
+.gooey-pill { flex: 1; min-width: 0; }
+.gooey-input:not(.is-open):hover .gooey-blob { background: var(--line-strong); }
+.gooey-input.is-open .gooey-pill { background: var(--bg-surface); }
+
+.gooey-trigger {
+  position: relative;
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: var(--gooey-size);
+  height: var(--gooey-size);
+  padding: 0;
+  border: none;
+  border-radius: var(--radius-full);
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+
+.gooey-field {
+  position: relative;
   flex: 1;
   min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  height: var(--gooey-size);
+  border-radius: var(--radius-full);
+  /* clip, not hidden: focusing the input while the field is still
+     collapsed must not scroll this box sideways. */
+  overflow: clip;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--dur-2), box-shadow var(--dur-2);
+}
+.gooey-input.is-open .gooey-field {
+  opacity: 1;
+  pointer-events: auto;
+  transition-delay: 60ms, 0s;
+}
+.gooey-input:focus-within .gooey-field {
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 45%, transparent);
+}
+.gooey-field input {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  padding: 0 0 0 12px;
   border: none;
   background: transparent;
   outline: none;
+  box-shadow: none; /* the field draws the focus ring, not the input */
   color: var(--text-1);
   font-size: var(--fs-13);
 }
-.ui-search input::placeholder { color: var(--text-3); }
-.ui-search:focus-within input::placeholder { color: var(--text-4); }
+.gooey-field input::placeholder { color: var(--text-3); }
+.gooey-field input:focus::placeholder { color: var(--text-4); }
+.gooey-field .ui-kbd,
+.gooey-field .ui-iconbtn { flex: none; margin-right: 6px; }
 
 /* ── Chips ──────────────────────────────────────────────────── */
 .ui-chip {

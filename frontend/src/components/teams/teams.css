@@ -1,5 +1,7 @@
 /* People picker in AddTeamMembersModal — used on Teams and on the board. */
 
+.tms-search { --gooey-w: 100%; margin-bottom: 8px; }
+
 .tms-people {
   display: flex;
   flex-direction: column;

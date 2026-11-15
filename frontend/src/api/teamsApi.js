@@ -173,9 +173,9 @@ export function withTeamMembers(workspace, teamId, people = []) {
 // ── Creating teams ───────────────────────────────────────────
 // POST /team/add takes `{teamName, workSpaceId}` (the server's
 // spelling) and adds the caller as the team's first member. The server
-// does not check the caller's role, so the UI only offers workspaces
-// the user owns or admins: the same rule as adding members, so a new
-// team is never one its creator cannot then staff.
+// only lets OWNER or ADMIN create teams (403 otherwise), so the UI only
+// offers workspaces the user owns or admins: the same rule as adding
+// members, so a new team is never one its creator cannot then staff.
 
 /** Workspaces the user may create a team in, sorted by name. */
 export function teamHomes(workspaces = []) {

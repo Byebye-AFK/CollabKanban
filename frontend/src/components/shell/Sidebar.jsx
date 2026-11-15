@@ -1,7 +1,11 @@
 import React, { useState } from 'react'
 import Avatar from '../Avatar'
-import { Icon, GLYPHS, ChevronDown, BoardIcon } from './icons'
+import { Icon, GLYPHS, ChevronDown, BoardIcon, PlusIcon } from './icons'
 import { colorFor } from './palette'
+import CreateBoardModal from '../board/CreateBoardModal'
+import { createBoard } from '../../api/boardApi'
+import { cacheWorkspace, withBoard } from '../../api/dashboardApi'
+import { addTeamMembers, withTeamMembers } from '../../api/teamsApi'
 
 /**
  * The app sidebar, after Linear's.
@@ -60,22 +64,64 @@ function Group({ label, children }) {
 
 function WorkspaceTree({ workspace, isInitiallyOpen, activeBoardId, onOpenBoard }) {
   const [isOpen, setOpen] = useState(isInitiallyOpen)
+  const [isCreating, setCreating] = useState(false)
   const boards = workspace.boards ?? []
+
+  // The new board goes last, then the picked people join its team. The
+  // cache is updated before opening so the board page already shows
+  // both. If anyone was not added, the dialog reports it and opens the
+  // board itself through `open`.
+  const handleCreate = async ({ name, teamId, userIds = [] }) => {
+    const board = await createBoard({
+      name,
+      teamId,
+      workspaceId: workspace.workspaceId,
+      position: boards.length,
+    })
+    const { added, failed } = await addTeamMembers(teamId, userIds)
+    const joined = (workspace.people ?? []).filter(p => added.includes(p.userId))
+    const [withNewBoard] = withBoard([workspace], workspace.workspaceId, board)
+    const updated = withTeamMembers(withNewBoard, teamId, joined)
+    cacheWorkspace(updated)
+
+    const open = () => onOpenBoard?.(board.boardId, updated, board.name)
+    if (failed.length === 0) open()
+    return { failed, open }
+  }
 
   return (
     <div className="app-tree">
-      <button
-        className="app-nav-item app-tree-head"
-        onClick={() => setOpen(o => !o)}
-        aria-expanded={isOpen}
-        title={workspace.name}
-      >
-        <span className="app-ws-mark" style={{ '--c': colorFor(workspace.name) }} aria-hidden="true">
-          {workspace.name.charAt(0).toUpperCase()}
-        </span>
-        <span className="app-nav-text">{workspace.name}</span>
-        <ChevronDown size={10} className={`app-tree-chevron${isOpen ? ' is-open' : ''}`} />
-      </button>
+      {/* Two sibling buttons, since a button cannot hold another. */}
+      <div className="app-tree-row">
+        <button
+          className="app-nav-item app-tree-head"
+          onClick={() => setOpen(o => !o)}
+          aria-expanded={isOpen}
+          title={workspace.name}
+        >
+          <span className="app-ws-mark" style={{ '--c': colorFor(workspace.name) }} aria-hidden="true">
+            {workspace.name.charAt(0).toUpperCase()}
+          </span>
+          <span className="app-nav-text">{workspace.name}</span>
+          <ChevronDown size={10} className={`app-tree-chevron${isOpen ? ' is-open' : ''}`} />
+        </button>
+        <button
+          className="ui-iconbtn is-sm app-tree-add"
+          onClick={() => setCreating(true)}
+          aria-label={`New board in ${workspace.name}`}
+          title="New board"
+        >
+          <PlusIcon size={12} />
+        </button>
+      </div>
+
+      {isCreating && (
+        <CreateBoardModal
+          workspace={workspace}
+          onSubmit={handleCreate}
+          onClose={() => setCreating(false)}
+        />
+      )}
 
       {isOpen && (
         <div className="app-tree-body">

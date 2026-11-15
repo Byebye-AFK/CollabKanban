@@ -138,6 +138,22 @@
 }
 .app-tree-chevron.is-open { transform: none; }
 
+/* The "+" sits over the row's right edge, before the chevron, and
+   shows on hover or keyboard focus so the tree stays quiet at rest. */
+.app-tree-row { position: relative; }
+/* The chevron keeps the row's right edge; the name stops short of the
+   "+" so a long workspace name never runs underneath it. */
+.app-tree-head .app-nav-text { margin-right: 26px; }
+.app-tree-add {
+  position: absolute;
+  top: 3px;
+  right: 28px;
+  opacity: 0;
+  transition: opacity var(--dur-1), background var(--dur-1), color var(--dur-1);
+}
+.app-tree-row:hover .app-tree-add,
+.app-tree-add:focus-visible { opacity: 1; }
+
 .app-tree-body {
   display: flex;
   flex-direction: column;
@@ -228,7 +244,7 @@ button.app-crumb:hover { background: var(--bg-hover); color: var(--text-1); }
   margin-left: auto;
   min-width: 0;
 }
-.app-header-right .ui-search { width: 280px; }
+.app-header-right .gooey-input { --gooey-w: 280px; }
 
 /* ── Tabs and toolbar rows ──────────────────────────────────── */
 .app-tabs,

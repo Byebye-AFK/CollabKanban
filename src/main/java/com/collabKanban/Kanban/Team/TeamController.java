@@ -4,57 +4,35 @@ import com.collabKanban.Kanban.DTO.CreateTeamReq;
 import com.collabKanban.Kanban.DTO.TeamMemberCreateReq;
 import com.collabKanban.Kanban.Response.TeamMemberRes;
 import com.collabKanban.Kanban.Response.TeamResponse;
-import com.collabKanban.Kanban.authentication.JwtService;
-
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+// The caller is taken from the SecurityContext by WorkspaceAccess inside
+// the services, so no endpoint parses the Authorization header itself.
 @RestController
 @RequestMapping("team")
 public class TeamController {
 
-    TeamService teamService;
-    TeamMembersService membersService;
-    JwtService jwtService;
+    private final TeamService teamService;
+    private final TeamMembersService membersService;
 
-    public  TeamController(TeamService service,TeamMembersService membersService,JwtService jwtService){
-
-        teamService=service;
-        this.membersService=membersService;
-        this.jwtService=jwtService;
+    public TeamController(TeamService teamService, TeamMembersService membersService) {
+        this.teamService = teamService;
+        this.membersService = membersService;
     }
 
     @PostMapping("/add")
-    public ResponseEntity<TeamResponse> addTeam(@RequestBody CreateTeamReq req, @RequestHeader("Authorization") String authHeader){
-        String userEmail=jwtService.extractUserName(authHeader.replace("Bearer ",""));
-
-        return new ResponseEntity<>(teamService.createTeam(req,userEmail), HttpStatus.OK);
-
-
+    public ResponseEntity<TeamResponse> addTeam(@RequestBody CreateTeamReq req) {
+        return ResponseEntity.ok(teamService.createTeam(req));
     }
 
     @PostMapping("/addMember")
-    public ResponseEntity<TeamMemberRes> addMember(@RequestBody TeamMemberCreateReq req,
-                                                   @RequestHeader("Authorization") String authHeader){
-
-        String callerEmail=jwtService.extractUserName(authHeader.replace("Bearer ",""));
-
-        return new ResponseEntity<>(membersService.addMembers(req,callerEmail),HttpStatus.OK);
-
+    public ResponseEntity<TeamMemberRes> addMember(@RequestBody TeamMemberCreateReq req) {
+        return ResponseEntity.ok(membersService.addMembers(req));
     }
-
 
     @DeleteMapping("/removeMember")
-    public ResponseEntity<TeamMemberRes> removeMember(@RequestBody TeamMemberCreateReq req){
-
-
-        return new ResponseEntity<>(membersService.removeMembers(req),HttpStatus.OK);
+    public ResponseEntity<TeamMemberRes> removeMember(@RequestBody TeamMemberCreateReq req) {
+        return ResponseEntity.ok(membersService.removeMembers(req));
     }
-
-
-
-
-
-
 }

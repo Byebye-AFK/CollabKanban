@@ -2,44 +2,27 @@ package com.collabKanban.Kanban.Boards;
 
 import com.collabKanban.Kanban.DTO.CreateBoardReq;
 import com.collabKanban.Kanban.Response.BoardResponse;
-import com.collabKanban.Kanban.Response.ColumResponse;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+// Failures are ResponseStatusExceptions thrown by BoardService (400/403/404),
+// so every handler here simply returns 200 with the body.
 @RestController
 @RequestMapping("board")
 public class BoardController {
-    BoardService boardService;
+    private final BoardService boardService;
 
-    @Autowired
-    private void boardService(BoardService service){
-        boardService=service;
+    public BoardController(BoardService boardService) {
+        this.boardService = boardService;
     }
 
     @PostMapping("/create")
-    public ResponseEntity<BoardResponse> createsBoard(@RequestBody CreateBoardReq req){
-        BoardResponse board= boardService.createBoard(req);
-        BoardResponse response=new BoardResponse();
-
-
-        if(board!=null){
-            return  new ResponseEntity<>(board,HttpStatus.OK);
-        }
-        return new ResponseEntity<>(HttpStatus.NOT_IMPLEMENTED);
+    public ResponseEntity<BoardResponse> createsBoard(@RequestBody CreateBoardReq req) {
+        return ResponseEntity.ok(boardService.createBoard(req));
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<BoardResponse> getBoards(@PathVariable Long id){
-        BoardResponse response=boardService.findBoards(id);
-
-        if(response!=null){
-            return  new ResponseEntity<>(response,HttpStatus.OK);
-        }
-
-        return new ResponseEntity<>(HttpStatus.NOT_IMPLEMENTED);
+    public ResponseEntity<BoardResponse> getBoards(@PathVariable Long id) {
+        return ResponseEntity.ok(boardService.findBoards(id));
     }
-
-
 }

@@ -1,89 +1,89 @@
 package com.collabKanban.Kanban.Boards;
 
-import com.collabKanban.Kanban.Card.Card;
-import com.collabKanban.Kanban.Card.CardRepo;
 import com.collabKanban.Kanban.DTO.CreateColumReq;
-import com.collabKanban.Kanban.Response.CardResponse;
 import com.collabKanban.Kanban.Response.ColumResponse;
-import org.springframework.beans.factory.annotation.Autowired;
+import com.collabKanban.Kanban.WorkSpace.WorkspaceAccess;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
-import org.springframework.web.bind.annotation.DeleteMapping;
-
-import java.util.List;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
 
 @Service
 public class ColumService {
-    ColumRepo columRepo;
-    BoardRepo boardRepo;
-    CardRepo cardRepo;
-    @Autowired
-    private void setColumRepo( ColumRepo repo){
-        columRepo=repo;
+    // Gap between neighbouring columns, so a column can later be dropped
+    // between two others without renumbering the rest.
+    static final long POSITION_STEP = 1000L;
 
+    private final ColumRepo columRepo;
+    private final BoardRepo boardRepo;
+    private final WorkspaceAccess access;
+
+    public ColumService(ColumRepo columRepo, BoardRepo boardRepo, WorkspaceAccess access) {
+        this.columRepo = columRepo;
+        this.boardRepo = boardRepo;
+        this.access = access;
     }
-    @Autowired
-    private void setBoardRepo(BoardRepo repo){
-        boardRepo=repo;
-    }
 
-    @Autowired
-    private void setCardRepo(CardRepo repo){ cardRepo=repo;}
+    // ── Create ───────────────────────────────────────────────────────────
+    @Transactional
+    public ColumResponse createColum(CreateColumReq req) {
+        if (req == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Column details are missing");
+        }
+        String name = BoardMapper.requireName(req.getName(), "Column name is required");
+        if (req.getBoardId() == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Board is required");
+        }
+        Board board = boardRepo.findById(req.getBoardId())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Board not found"));
+        access.requireBoardEditor(board);
 
-    public ColumResponse createColum(CreateColumReq req){
-
-        Colum colum=new Colum();
-        ColumResponse response=new ColumResponse();
-
-        Board board=boardRepo.getReferenceById(req.getBoardId());
-        Colum lastcolum= columRepo.findTop(board);
-        Long position=
-                lastcolum==null
-                        ? 1000L
-                        : lastcolum.getPosition()+1000;
-        colum.setPosition(position);
-        colum.setName(req.getName());
+        Colum colum = new Colum();
+        colum.setName(name);
         colum.setBoard(board);
+        colum.setPosition(req.getPosition() != null ? req.getPosition() : nextPosition(board));
 
-
-        response.setColumnId(colum.getColumnId());
-        response.setName(colum.getName());
-        columRepo.save(colum);
-
-        return response;
-
+        // Map the saved entity: the id only exists after save.
+        return BoardMapper.toColumResponse(columRepo.save(colum));
     }
 
-    public ColumResponse getColum(Long id){
-        ColumResponse response=new ColumResponse();
-        Colum column=columRepo.getReferenceById(id);
-
-        List<CardResponse> cards=column.getCards().stream().map(card -> {CardResponse response1=new CardResponse();
-                                                                                response1.setCardId(card.getCardId());
-                                                                                response1.setTitle(card.getTitle());
-                                                                                response1.setDescription(card.getDescription());
-                                                                                response1.setPosition(card.getPosition());
-                                                                                return response1;
-        } ).toList();
-
-        response.setName(column.getName());
-        response.setCards(cards);
-        response.setColumnId(id);
-
-        return response;
-
-
+    private long nextPosition(Board board) {
+        Colum last = columRepo.findTop(board);
+        if (last == null || last.getPosition() == null) {
+            return POSITION_STEP;
+        }
+        return last.getPosition() + POSITION_STEP;
     }
 
+    // ── Read ─────────────────────────────────────────────────────────────
+    @Transactional(readOnly = true)
+    public ColumResponse getColum(Long id) {
+        Colum column = requireColumn(id);
+        access.requireBoardReader(column.getBoard());
+        return BoardMapper.toColumResponse(column);
+    }
 
-    public ColumResponse deleteColum(Long id){
-        ColumResponse response=new ColumResponse();
-        Colum column=columRepo.getReferenceById(id);
-        response.setName(column.getName());
+    // ── Delete ───────────────────────────────────────────────────────────
+    // Cascade plus orphan removal delete the column's cards with it.
+    @Transactional
+    public ColumResponse deleteColum(Long id) {
+        Colum column = requireColumn(id);
+        access.requireBoardEditor(column.getBoard());
+
+        ColumResponse response = new ColumResponse();
         response.setColumnId(column.getColumnId());
+        response.setName(column.getName());
+        response.setPosition(column.getPosition());
 
-        columRepo.deleteById(id);
+        columRepo.delete(column);
         return response;
-
     }
 
+    private Colum requireColumn(Long id) {
+        if (id == null) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Column not found");
+        }
+        return columRepo.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Column not found"));
+    }
 }

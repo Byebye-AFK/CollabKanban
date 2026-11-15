@@ -188,6 +188,7 @@ function normalizeBoard(board) {
   return {
     boardId: board?.boardId ?? board?.id,
     name: board?.name || 'Untitled board',
+    ...(board?.teamId != null ? { teamId: board.teamId } : {}),
     ...(Array.isArray(board?.columns) ? { columns: board.columns } : {}),
     ...(typeof board?.cards === 'number' ? { cards: board.cards } : {}),
     ...(typeof board?.done === 'number' ? { done: board.done } : {}),
@@ -218,6 +219,26 @@ let lastWorkspaces = []
 /** The workspaces from the most recent getDashboard(), or [] before one. */
 export function getCachedWorkspaces() {
   return lastWorkspaces
+}
+
+/** The workspaces with `board` appended to one of them, without mutating the input. */
+export function withBoard(workspaces, workspaceId, board) {
+  return workspaces.map(ws =>
+    ws.workspaceId === workspaceId
+      ? { ...ws, boards: [...(ws.boards || []), normalizeBoard(board)] }
+      : ws,
+  )
+}
+
+/**
+ * Swaps one workspace in the cached load for an updated copy (a new
+ * board, new team members), so the board it opens already shows the
+ * change without refetching /workspace/mine.
+ */
+export function cacheWorkspace(workspace) {
+  lastWorkspaces = lastWorkspaces.map(ws =>
+    ws.workspaceId === workspace.workspaceId ? workspace : ws,
+  )
 }
 
 /**

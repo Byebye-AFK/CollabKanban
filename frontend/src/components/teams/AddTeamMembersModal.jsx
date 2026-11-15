@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
 import Modal from '../ui/Modal'
-import Avatar from '../Avatar'
+import GooeyInput from '../ui/GooeyInput'
+import PeoplePicker, { toggled } from './PeoplePicker'
 import { availableMembers } from '../../api/teamsApi'
 import './teams.css'
 
@@ -40,14 +41,7 @@ export default function AddTeamMembersModal({ team, onSubmit, onClose }) {
 
   useEffect(() => { searchRef.current?.focus() }, [])
 
-  const toggle = (userId) => {
-    setSelected(prev => {
-      const next = new Set(prev)
-      if (next.has(userId)) next.delete(userId)
-      else next.add(userId)
-      return next
-    })
-  }
+  const toggle = (userId) => setSelected(prev => toggled(prev, userId))
 
   const handleSubmit = async () => {
     if (selected.size === 0 || submitting) return
@@ -91,36 +85,21 @@ export default function AddTeamMembersModal({ team, onSubmit, onClose }) {
         </p>
       ) : (
         <>
-          <input
-            ref={searchRef}
+          <GooeyInput
+            inputRef={searchRef}
             type="search"
-            className="ui-input"
+            anchor="start"
+            className="tms-search"
             placeholder="Search people…"
-            aria-label="Filter people"
+            label="Filter people"
             value={query}
-            onChange={e => setQuery(e.target.value)}
+            onChange={setQuery}
           />
-          <ul className="tms-people">
-            {visible.map(person => (
-              <li key={person.userId}>
-                <label className={`tms-person${selected.has(person.userId) ? ' is-on' : ''}`}>
-                  <input
-                    type="checkbox"
-                    checked={selected.has(person.userId)}
-                    onChange={() => toggle(person.userId)}
-                  />
-                  <Avatar name={person.name} size={24} decorative />
-                  <span className="tms-person-text">
-                    <span className="tms-person-name">{person.name}</span>
-                    {person.email && <span className="tms-person-email">{person.email}</span>}
-                  </span>
-                </label>
-              </li>
-            ))}
+          <PeoplePicker people={visible} selected={selected} onToggle={toggle}>
             {visible.length === 0 && (
               <li className="tms-empty">No one matches “{query.trim()}”.</li>
             )}
-          </ul>
+          </PeoplePicker>
         </>
       )}
 

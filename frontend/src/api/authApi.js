@@ -13,8 +13,12 @@ function decodeJwtEmail(token) {
 function persistSession(token) {
   const email = decodeJwtEmail(token)
   const user = { email, name: email ? email.split('@')[0] : 'there' }
-  localStorage.setItem('jwt_token', token)
-  localStorage.setItem('kanban_user', JSON.stringify(user))
+  try {
+    localStorage.setItem('jwt_token', token)
+    localStorage.setItem('kanban_user', JSON.stringify(user))
+  } catch {
+    // Storage blocked (private mode, quota): the session lasts this page only.
+  }
   return user
 }
 
@@ -29,15 +33,28 @@ export function getStoredUser() {
 }
 
 export function signOut() {
-  localStorage.removeItem('jwt_token')
-  localStorage.removeItem('kanban_user')
+  try {
+    localStorage.removeItem('jwt_token')
+    localStorage.removeItem('kanban_user')
+  } catch {
+    // Nothing stored to clear.
+  }
 }
 
-// Captures ?token= from the OAuth2 redirect (see Security.java / OauthService)
+// ── OAuth2 callback ─────────────────────────────────────────
+// OauthService redirects to /oauth2/callback#token=<jwt>. The fragment is
+// never sent to a server or leaked in a Referer header. ?token= is still read
+// as a fallback for an older backend. Either way the token is wiped from the
+// address bar (and so from history) right after it is read.
+function readCallbackToken(url) {
+  const fromHash = new URLSearchParams(url.hash.replace(/^#/, '')).get('token')
+  return fromHash || url.searchParams.get('token')
+}
+
 export function consumeOauthCallback() {
   const url = new URL(window.location.href)
   if (url.pathname !== '/oauth2/callback') return null
-  const token = url.searchParams.get('token')
+  const token = readCallbackToken(url)
   if (!token) return null
   const user = persistSession(token)
   window.history.replaceState({}, '', '/')

@@ -272,6 +272,59 @@ describe('receive-only contract', () => {
   })
 })
 
+describe('CONNECT auth headers', () => {
+  beforeEach(() => {
+    localStorage.clear()
+  })
+
+  test('sends the stored JWT as a bearer token on connect', async () => {
+    // Arrange
+    localStorage.setItem('jwt_token', 'abc.def.ghi')
+    const { subscribeToBoard } = await loadSocket()
+    subscribeToBoard(7, {})
+
+    // Act
+    await only().config.beforeConnect(only())
+
+    // Assert
+    expect(only().connectHeaders).toEqual({ Authorization: 'Bearer abc.def.ghi' })
+  })
+
+  test('reads the token again on every reconnect', async () => {
+    localStorage.setItem('jwt_token', 'old-token')
+    const { subscribeToBoard } = await loadSocket()
+    subscribeToBoard(7, {})
+    await only().config.beforeConnect(only())
+
+    localStorage.setItem('jwt_token', 'new-token')
+    await only().config.beforeConnect(only())
+
+    expect(only().connectHeaders).toEqual({ Authorization: 'Bearer new-token' })
+  })
+
+  test('sends no Authorization header when signed out', async () => {
+    const { subscribeToBoard } = await loadSocket()
+    subscribeToBoard(7, {})
+
+    await only().config.beforeConnect(only())
+
+    expect(only().connectHeaders).toEqual({})
+  })
+
+  test('treats unreadable localStorage as signed out instead of throwing', async () => {
+    const { buildConnectHeaders } = await loadSocket()
+    const spy = vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {
+      throw new Error('blocked')
+    })
+
+    try {
+      expect(buildConnectHeaders()).toEqual({})
+    } finally {
+      spy.mockRestore()
+    }
+  })
+})
+
 describe('disconnectSocket', () => {
   test('deactivates the underlying client', async () => {
     const { subscribeToBoard, disconnectSocket } = await loadSocket()

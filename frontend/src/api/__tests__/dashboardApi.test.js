@@ -1,5 +1,5 @@
 import { describe, test, expect, vi, afterEach } from 'vitest'
-import { normalizeWorkspace, relativeTime } from '../dashboardApi'
+import { normalizeWorkspace, relativeTime, withBoard } from '../dashboardApi'
 
 /** Exactly the shape Spring's WorkSpaceResponse serialises. */
 const apiWorkspace = {
@@ -165,5 +165,59 @@ describe('getCachedWorkspaces', () => {
     const { workspaces } = await api.getDashboard()
 
     expect(api.getCachedWorkspaces()).toEqual(workspaces)
+  })
+})
+
+describe('withBoard', () => {
+  const workspaces = [
+    { workspaceId: 7, name: 'Backend Team', boards: [{ boardId: 1, name: 'First Board' }] },
+    { workspaceId: 8, name: 'Growth', boards: [] },
+  ]
+
+  test('appends a normalised board to the matching workspace only', () => {
+    const next = withBoard(workspaces, 7, { boardId: 9, name: 'Sprint 25', teamId: 4, columns: [] })
+
+    expect(next[0].boards).toEqual([
+      { boardId: 1, name: 'First Board' },
+      { boardId: 9, name: 'Sprint 25', teamId: 4, columns: [] },
+    ])
+    expect(next[1]).toBe(workspaces[1])
+  })
+
+  test('does not mutate the input', () => {
+    withBoard(workspaces, 7, { boardId: 9, name: 'Sprint 25' })
+
+    expect(workspaces[0].boards).toHaveLength(1)
+  })
+})
+
+describe('normalizeWorkspace boards', () => {
+  test('keeps the team a board belongs to', () => {
+    const ws = normalizeWorkspace({ boards: [{ boardId: 1, name: 'A', teamId: 3 }] })
+
+    expect(ws.boards[0].teamId).toBe(3)
+  })
+})
+
+describe('cacheWorkspace', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals()
+    vi.resetModules()
+  })
+
+  test('replaces the cached workspace with the same id', async () => {
+    vi.resetModules()
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve([{ workSpaceId: 7, name: 'A' }, { workSpaceId: 8, name: 'B' }]),
+    }))
+    const api = await import('../dashboardApi')
+    await api.getDashboard()
+    const [, other] = api.getCachedWorkspaces()
+
+    api.cacheWorkspace({ workspaceId: 7, name: 'A2' })
+
+    expect(api.getCachedWorkspaces()[0].name).toBe('A2')
+    expect(api.getCachedWorkspaces()[1]).toBe(other)
   })
 })

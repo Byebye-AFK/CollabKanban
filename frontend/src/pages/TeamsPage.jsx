@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import AppShell from '../components/shell/AppShell'
 import PageHeader from '../components/shell/PageHeader'
-import SearchField from '../components/shell/SearchField'
+import GooeyInput from '../components/ui/GooeyInput'
 import { WarnIcon, PlusIcon } from '../components/shell/icons'
 import LibraryToolbar from '../components/library/LibraryToolbar'
 import LibraryGrid from '../components/library/LibraryGrid'
@@ -120,7 +120,7 @@ export default function TeamsPage({ user, onNavigate, onOpenBoard, onSignOut }) 
         collapsed={collapsed}
         onToggleCollapse={() => setCollapsed(c => !c)}
       >
-        <SearchField
+        <GooeyInput
           value={query}
           onChange={setQuery}
           placeholder="Search teams and workspaces…"

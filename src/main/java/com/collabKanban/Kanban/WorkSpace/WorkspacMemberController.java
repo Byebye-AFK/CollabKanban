@@ -5,29 +5,25 @@ import com.collabKanban.Kanban.Response.RoleResponse;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
 
 
 @RestController
 @RequestMapping("/member")
 public class WorkspacMemberController {
 
-    WorkspaceMemberService memberService;
+    private final WorkspaceMemberService memberService;
 
     public WorkspacMemberController(WorkspaceMemberService memberService) {
         this.memberService = memberService;
     }
 
     @PostMapping("/addmembership")
-    public ResponseEntity<RoleResponse> addMemberships(@RequestBody AddWorkspaceMember memberDto){
-        RoleResponse response=memberService.addMembership(memberDto.getWorkSpaceId(), memberDto.getUserId(), memberDto.getRole());
-
-
-        return new ResponseEntity<>(response , HttpStatus.OK);
-
-
+    public ResponseEntity<RoleResponse> addMemberships(@RequestBody AddWorkspaceMember memberDto) {
+        if (memberDto == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "workSpaceId, userId and role are required");
+        }
+        return ResponseEntity.ok(
+                memberService.addMembership(memberDto.getWorkSpaceId(), memberDto.getUserId(), memberDto.getRole()));
     }
-
-
-
-
 }

@@ -45,7 +45,9 @@ public class Security {
            security.cors(Customizer.withDefaults());
 
            security.authorizeHttpRequests(authorize-> authorize
-                   .requestMatchers("/user/**","/oauth2/**","/ws/**","/error").permitAll()
+                   // Only signup and login are public under /user. /user/delete/{id} and
+                   // anything added later must require a token.
+                   .requestMatchers("/user/add","/user/login","/oauth2/**","/login/oauth2/**","/ws/**","/error").permitAll()
                    .anyRequest().authenticated());
 
             security.sessionManagement(session-> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS));

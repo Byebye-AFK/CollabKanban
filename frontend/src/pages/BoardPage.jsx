@@ -3,7 +3,7 @@ import { useBoard } from '../hooks/useBoard'
 import { useBoardTeam } from '../hooks/useBoardTeam'
 import AppShell from '../components/shell/AppShell'
 import PageHeader from '../components/shell/PageHeader'
-import SearchField from '../components/shell/SearchField'
+import GooeyInput from '../components/ui/GooeyInput'
 import { BoardIcon, PlusIcon, RefreshIcon, WarnIcon } from '../components/shell/icons'
 import KanbanBoard from '../components/KanbanBoard'
 import BoardMembers from '../components/board/BoardMembers'
@@ -203,12 +203,13 @@ export default function BoardPage({
       </div>
 
       <div className="app-toolbar">
-        <SearchField
+        <GooeyInput
           value={query}
           onChange={setQuery}
           placeholder="Filter cards…"
           label="Search cards"
           hotkey
+          anchor="start"
           className="brd-filter"
         />
         {matchLabel && <span className="app-meta">{matchLabel}</span>}

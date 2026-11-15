@@ -8,7 +8,7 @@
    ═════════════════════════════════════════════════════════════ */
 
 /* ── Toolbar extras ─────────────────────────────────────────── */
-.brd-filter { width: 260px; }
+.brd-filter { --gooey-w: 260px; }
 
 .brd-display { position: relative; }
 .brd-display-menu { top: calc(100% + 6px); right: 0; min-width: 240px; }
@@ -280,6 +280,6 @@
 .brd-suggest { display: flex; flex-wrap: wrap; gap: 6px; }
 
 @media (max-width: 760px) {
-  .brd-filter { width: 160px; }
+  .brd-filter { --gooey-w: 160px; }
   .brd-col { width: 300px; }
 }

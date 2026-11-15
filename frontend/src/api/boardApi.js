@@ -39,6 +39,24 @@ export async function getBoard(boardId) {
   return request(`/board/${boardId}`)
 }
 
+/**
+ * POST /board/create
+ * The server treats the team as optional, but every board in the UI
+ * belongs to one, so both name and team are checked here first.
+ * @param {{ name: string, workspaceId: number, teamId: number, position?: number }} payload
+ * @returns {Promise<{ boardId: number, name: string, teamId: number, columns: Array }>}
+ */
+export async function createBoard({ name, workspaceId, teamId, position = 0 } = {}) {
+  const boardName = (name || '').trim()
+  if (!boardName) throw new Error('Give the board a name.')
+  if (workspaceId == null) throw new Error('Pick a workspace for the board.')
+  if (teamId == null) throw new Error('Pick a team for the board.')
+  return request('/board/create', {
+    method: 'POST',
+    body: JSON.stringify({ name: boardName, workspaceId, teamId, position }),
+  })
+}
+
 // ── Columns ───────────────────────────────────────────────────
 
 /**
@@ -71,7 +89,6 @@ export async function deleteColumn(columnId) {
  * @param {{ title: string, description: string, columnId: number, assignedTo: number }} payload
  */
 export async function createCard(payload) {
-  console.log(JSON.stringify(payload))
   return request(`/card/create`, {
     method: 'POST',
     body: JSON.stringify(payload),
@@ -79,21 +96,22 @@ export async function createCard(payload) {
 }
 
 /**
- * PATCH /cards/{cardId}/move
- * Moves a card to a different column.
+ * PUT /card/move/{cardId}
+ * Moves a card to a column on the same board.
+ * `version` is the card version this client last saw; when sent, the server
+ * answers 409 if someone else changed the card since.
  * @param {number} cardId
  * @param {number} targetColumnId
+ * @param {number} position
+ * @param {number} [version]
  */
-export async function moveCard(
-  cardId,
-  targetColumnId,
-  position
-) {
+export async function moveCard(cardId, targetColumnId, position, version) {
   return request(`/card/move/${cardId}`, {
     method: 'PUT',
     body: JSON.stringify({
       targetColumnId,
       position,
+      ...(version != null ? { version } : {}),
     }),
   })
 }
