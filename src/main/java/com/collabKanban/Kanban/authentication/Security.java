@@ -1,5 +1,6 @@
 package com.collabKanban.Kanban.authentication;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -81,10 +82,12 @@ public class Security {
      }
 
     @Bean
-    public CorsConfigurationSource corsConfigurationSource(){
+    public CorsConfigurationSource corsConfigurationSource(
+            @Value("${app.frontend-url}") String frontendUrl){
         CorsConfiguration config=new CorsConfiguration();
         config.setAllowedHeaders(List.of("*"));
-        config.setAllowedOrigins(List.of("http://localhost:5173"));
+        // Same origin the OAuth handler redirects back to (app.frontend-url).
+        config.setAllowedOrigins(List.of(frontendUrl.replaceAll("/+$", "")));
         config.setAllowCredentials(true);
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         config.setExposedHeaders(List.of("Authorization"));

@@ -1,5 +1,6 @@
 package com.collabKanban.Kanban.Websockets;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.messaging.simp.config.ChannelRegistration;
 import org.springframework.messaging.simp.config.MessageBrokerRegistry;
@@ -16,18 +17,20 @@ import org.springframework.web.socket.config.annotation.WebSocketMessageBrokerCo
 @EnableWebSocketMessageBroker
 public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 
-    // Same single origin that the REST CORS config allows.
-    private static final String FRONTEND_ORIGIN = "http://localhost:5173";
+    // Same single origin that the REST CORS config allows (app.frontend-url).
+    private final String frontendOrigin;
 
     private final StompAuthInterceptor stompAuthInterceptor;
 
-    public WebSocketConfig(StompAuthInterceptor stompAuthInterceptor) {
+    public WebSocketConfig(StompAuthInterceptor stompAuthInterceptor,
+                           @Value("${app.frontend-url}") String frontendUrl) {
         this.stompAuthInterceptor = stompAuthInterceptor;
+        this.frontendOrigin = frontendUrl.replaceAll("/+$", "");
     }
 
     @Override
     public void registerStompEndpoints(StompEndpointRegistry registry) {
-        registry.addEndpoint("/ws").setAllowedOrigins(FRONTEND_ORIGIN);
+        registry.addEndpoint("/ws").setAllowedOrigins(frontendOrigin);
     }
 
     @Override
