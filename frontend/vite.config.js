@@ -1,15 +1,41 @@
-import { defineConfig } from 'vite'
+import { defineConfig, loadEnv } from 'vite'
 import react from '@vitejs/plugin-react'
 
-export default defineConfig({
-  plugins: [react()],
+// ── Content-Security-Policy (production build only) ──────────────
+// Dev needs inline scripts for React Refresh, so the policy is injected at
+// build time. connect-src must name the API and WebSocket origins, which
+// come from the same env vars config.js reads.
+function cspPlugin(env) {
+  const api = (env.VITE_API_URL || 'http://localhost:8080').replace(/\/+$/, '')
+  const ws = env.VITE_WS_URL || `${api.replace(/^http/, 'ws')}/ws`
+  const policy = [
+    "default-src 'self'",
+    "script-src 'self'",
+    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+    "font-src 'self' https://fonts.gstatic.com",
+    "img-src 'self' data: https:",
+    `connect-src 'self' ${api} ${new URL(ws).origin}`,
+    "object-src 'none'",
+    "base-uri 'self'",
+    "frame-ancestors 'none'",
+  ].join('; ')
+  return {
+    name: 'inject-csp',
+    apply: 'build',
+    transformIndexHtml: () => [
+      {
+        tag: 'meta',
+        attrs: { 'http-equiv': 'Content-Security-Policy', content: policy },
+        injectTo: 'head-prepend',
+      },
+    ],
+  }
+}
+
+export default defineConfig(({ mode }) => ({
+  plugins: [react(), cspPlugin(loadEnv(mode, process.cwd(), 'VITE_'))],
   server: {
     port: 5173,
-    proxy: {
-      '/board': 'http://localhost:8080',
-      '/boards': 'http://localhost:8080',
-      '/cards': 'http://localhost:8080',
-    },
   },
   test: {
     environment: 'jsdom',
@@ -48,4 +74,4 @@ export default defineConfig({
       thresholds: { lines: 80, functions: 80, branches: 80, statements: 80 },
     },
   },
-})
+}))

@@ -1,4 +1,5 @@
 import { Client } from '@stomp/stompjs'
+import { WS_URL } from './config'
 
 // ── STOMP over native WebSocket ─────────────────────────────────
 // Receive-only. Writes go over REST so they stay behind JwtFilter and
@@ -9,7 +10,6 @@ import { Client } from '@stomp/stompjs'
 // enableSimpleBroker("/topic"). The backend's StompAuthInterceptor rejects a
 // CONNECT without a valid bearer token and a SUBSCRIBE to a board the user
 // is not a member of.
-const WS_URL = 'ws://localhost:8080/ws'
 const TOKEN_KEY = 'jwt_token'
 const RECONNECT_DELAY_MS = 5000
 const HEARTBEAT_MS = 10000

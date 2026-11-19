@@ -1,9 +1,9 @@
 import { parseApiError } from './apiError'
+import { API_BASE_URL } from './config'
 
 // ── Base URL ─────────────────────────────────────────────────
-// Change this to your Spring Boot server origin in production.
-// In development, Vite proxies /board, /boards, /cards → localhost:8080
-const BASE_URL = 'http://localhost:8080'
+// Set VITE_API_URL to your Spring Boot origin for deployments (see config.js).
+const BASE_URL = API_BASE_URL
 
 // ── Helpers ──────────────────────────────────────────────────
 async function request(path, options = {}) {

@@ -10,8 +10,9 @@
 
 import { boardProgress } from './boardsApi'
 import { parseApiError } from './apiError'
+import { API_BASE_URL } from './config'
 
-const BASE_URL = 'http://localhost:8080'
+const BASE_URL = API_BASE_URL
 
 async function request(path) {
   const token = localStorage.getItem('jwt_token')

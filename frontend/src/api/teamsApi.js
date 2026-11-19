@@ -12,8 +12,9 @@
 
 import { filterBy, sortBy } from './library'
 import { parseApiError } from './apiError'
+import { API_BASE_URL } from './config'
 
-const BASE_URL = 'http://localhost:8080'
+const BASE_URL = API_BASE_URL
 
 /** Roles the server lets change a team's membership. */
 const TEAM_MANAGER_ROLES = ['OWNER', 'ADMIN']
