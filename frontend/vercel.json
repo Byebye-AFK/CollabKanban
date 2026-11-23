@@ -1,0 +1,8 @@
+{
+  "build": {
+    "env": {
+      "VITE_API_URL": "https://collabkanban-ymsi.onrender.com"
+    }
+  },
+  "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }]
+}
